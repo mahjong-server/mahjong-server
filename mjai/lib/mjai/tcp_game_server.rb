@@ -66,7 +66,8 @@ module Mjai
                     end
                   end
                 rescue JSON::ParserError => ex
-                  error = "JSON syntax error: %s" % ex.message
+                  error = "JSON syntax error: %s" % [ex.message].pack("M").gsub("=\n","")
+
                 rescue SystemCallError => ex
                   error = ex.message
                 rescue LocalError => ex

@@ -176,13 +176,12 @@ module Mjai
             response = responses[i]
             begin
               if response && response.actor != @players[i]
-                raise(ValidationError, "Invalid actor.")
+                raise ValidationError.new("Invalid actor.")
               end
               validate_response_type(response, @players[i], action)
               validate_response_content(response, action) if response
-            rescue ValidationError => ex
-              raise(ValidationError,
-                  "Error in player %d's response: %s Response: %s" % [i, ex.message, response])
+            rescue ValidationError
+              raise GameFailError.new($!.message, i, response)
             end
           end
         end

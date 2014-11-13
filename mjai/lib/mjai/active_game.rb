@@ -38,9 +38,9 @@ module Mjai
             end
             do_action({:type => :end_game, :scores => get_final_scores()})
             return true
-          rescue ValidationError => ex
-            do_action({:type => :error, :message => ex.message})
-            return false
+          rescue GameFailError
+            do_action({:type => :error, :message => "Player" + $!.player.to_s + "'s illegal response: " + $!.message})
+            raise $!
           end
         end
         

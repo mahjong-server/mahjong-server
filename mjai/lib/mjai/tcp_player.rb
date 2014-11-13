@@ -9,7 +9,7 @@ module Mjai
     
     class TCPPlayer < Player
         
-        TIMEOUT_SEC = 60
+        TIMEOUT_SEC = 600
         
         def initialize(socket, name)
           super()
@@ -23,16 +23,21 @@ module Mjai
             
             puts("server -> player %d\t%s" % [self.id, action.to_json()])
             @socket.puts(action.to_json())
-            line = nil
-            Timeout.timeout(TIMEOUT_SEC) do
-              line = @socket.gets()
-            end
-            if line
-              puts("server <- player %d\t%s" % [self.id, line])
-              return Action.from_json(line.chomp(), self.game)
+            
+            if action.type == :error then
+                close()
             else
-              puts("server :  Player %d has disconnected." % self.id)
-              return Action.new({:type => :none})
+                line = nil
+                Timeout.timeout(TIMEOUT_SEC) do
+                  line = @socket.gets()
+                end
+                if line
+                  puts("server <- player %d\t%s" % [self.id, line])
+                  return Action.from_json(line.chomp(), self.game)
+                else
+                  puts("server :  Player %d has disconnected." % self.id)
+                  return Action.new({:type => :none})
+                end
             end
             
           rescue Timeout::Error
@@ -43,7 +48,7 @@ module Mjai
           rescue JSON::ParserError => ex
             return create_action({
                 :type => :error,
-                :message => "JSON syntax error: %s" % ex.message,
+                :message => "JSON syntax error: %s" % [ex.message].pack("M").gsub("=\n","") ,
             })
           rescue ValidationError => ex
             return create_action({
