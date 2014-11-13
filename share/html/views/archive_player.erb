@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html><head>
+  <meta charset="utf-8"> 
+  <title>Mahjong Archive Player</title>
+  <link rel="stylesheet" type="text/css" href="<%=h base_name %>.files/css/style.css">
+  <script src="<%=h base_name %>.files/js/jquery-1.7.2.min.js"></script>
+  <script src="<%=h base_name %>.files/js/dytem.js"></script>
+  <script>
+    allActions = <%= actions_json %>;
+    resourceDir = "<%=h base_name %>.files";
+  </script>
+  <script src="<%=h base_name %>.files/js/archive_player.js"></script>
+</head><body>
+  
+  <div class="board">
+    <div id="players" class="repeated player">
+      <div class="ho">
+        <div id="players.hoRows" class="repeated pai-row">
+          <img id="players.hoRows.pais" class="repeated">
+        </div>
+      </div>
+      <div class="tehai-container pai-row">
+        <img id="players.tehais" class="repeated">
+        <img id="players.tsumoPai" class="tsumo-pai">
+      </div>
+      <div class="furo-container pai-row">
+        <span id="players.furos" class="repeated">
+          <img id="players.furos.pais" class="repeated">
+        </span>
+      </div>
+      <div class="player-footer"></div>
+    </div>
+    <div class="wanpais-container">
+      <img id="wanpais" class="repeated">
+    </div>
+  </div>
+  
+  <div class="controller-container">
+    <div>
+      注: Chrome以外のブラウザでは動かないかも。
+    </div>
+    <div>
+      <select id="kyokuSelector"></select>
+    </div>
+    <div>
+      <button id="prev-button">Prev</button>
+      <button id="next-button">Next</button>
+      <input id="action-id-label" type="text" size="3" value="0">
+      <button id="go-button">Go</button>
+    </div>
+    <table border="0">
+      <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Score</th>
+        <th><button id="viewpoint-button">Viewpoint</button></th>
+      </tr>
+      <tr id="playerInfos" class="repeated">
+        <td id="playerInfos.index"></td>
+        <td id="playerInfos.name"></td>
+        <td id="playerInfos.score"></td>
+        <td id="playerInfos.viewpoint"></td>
+      </tr>
+    </table>
+    <div id="action-label"></div>
+    <div id="log-label" class="log-label"></div>
+  </div>
+  
+</body></html>
