@@ -48,6 +48,10 @@ module Mjai
                 else
                   puts("server :  Player %d has disconnected." % self.id)
                   @closed = true
+                  
+                  if action.type == :end_game then
+                      return Action.new({:type => :none})
+                  end
                   return create_action({:type => :error, :message => "(gets) disconnected"})
                 end
             end
