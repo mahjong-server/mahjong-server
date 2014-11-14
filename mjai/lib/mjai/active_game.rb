@@ -36,8 +36,10 @@ module Mjai
             while !self.game_finished?
               play_kyoku()
             end
-            do_action({:type => :end_game, :scores => get_final_scores()})
-            return true
+            
+            fin_score = get_final_scores()
+            do_action({:type => :end_game, :scores => fin_score})
+            return fin_score
           rescue GameFailError
             do_action({:type => :error, :message => "Player" + $!.player.to_s + "'s illegal response: " + $!.message})
             raise $!

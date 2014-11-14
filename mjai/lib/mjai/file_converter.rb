@@ -44,6 +44,7 @@ module Mjai
         
         def mjson_to_html(mjson_path, html_path)
           
+=begin
           res_dir = File.dirname(__FILE__) + "/../../share/html"
           make("#{res_dir}/js/archive_player.coffee",
               "#{res_dir}/js/archive_player.js",
@@ -54,6 +55,7 @@ module Mjai
           make("#{res_dir}/css/style.scss",
               "#{res_dir}/css/style.css",
               "sass #{res_dir}/css/style.scss #{res_dir}/css/style.css")
+=end
           
           # Variants used in template.
           action_jsons = File.readlines(mjson_path).map(){ |s| s.chomp().gsub(/\//){ "\\/" } }

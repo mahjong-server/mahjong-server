@@ -8,6 +8,7 @@ require "thread"
 
 require "mjai/tcp_player"
 require "mjai/active_game"
+require "mjai/file_converter"
 
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 11600
@@ -33,10 +34,11 @@ end
 def play_game(players)
 	
 	game = nil
-	success = false
+	date_string = Time.now.strftime("%Y-%m-%d-%H%M%S")
+	
 	
 	begin
-		mjson_path = "mjlog/%s.mjson" % Time.now.strftime("%Y-%m-%d-%H%M%S")
+		mjson_path = "mjlog/%s.mjson" % date_string
 		
 		mjson_out = open(mjson_path, "w")
 		if mjson_out then
@@ -52,22 +54,46 @@ def play_game(players)
 			mjson_out.puts(action.to_json()) if mjson_out
 		end
 		
-		success = game.play()
+		# start log
+		mjstat = open("mjlog/stat.txt", "a")
+		mjstat.puts( JSON.dump({"type" => "start", "idtime" => date_string, "player" => game.players.collect{|p| p.name} }) )
+		mjstat.close
+		
+		score = game.play()
+		
+		# end log
+		mjstat = open("mjlog/stat.txt", "a")
+		mjstat.puts( JSON.dump({"type" => "finish", "idtime" => date_string, "time" => Time.now.strftime("%Y-%m-%d-%H%M%S") , "score" => score}) )
+		mjstat.close
 		
 		mjson_out.close if mjson_out
 		
-		#FileConverter.new().convert(mjson_path, "#{mjson_path}.html") if mjson_path
+		Mjai::FileConverter.new().convert(mjson_path, "#{mjson_path}.html") if mjson_path
 		
 	rescue Mjai::GameFailError
+	
+		# error log
+		mjstat = open("mjlog/stat.txt", "a")
+		mjstat.puts( JSON.dump({"type" => "error", "idtime" => date_string, "time" => Time.now.strftime("%Y-%m-%d-%H%M%S") , "criminal" => $!.player, "message" => $!.message.to_s}) )
+		mjstat.close
+		
 		print_backtrace($!)
-		STDERR.puts "player " + $!.player + " " + $!.response
+		STDERR.puts ("player " + $!.player.to_s + " " + $!.response)
 	rescue
+		# error log
+		mjstat = open("mjlog/stat.txt", "a")
+		mjstat.puts( JSON.dump({"type" => "error", "idtime" => date_string, "time" => Time.now.strftime("%Y-%m-%d-%H%M%S") , "criminal" => -1, "message" => $!.message.to_s}) )
+		mjstat.close
+		
+		STDERR.puts ("Other Error")
 		print_backtrace($!)
-		p $!
 	end
 	
-	players.each do |p|
-		p.socket.close
+	begin
+		players.each do |p|
+			p.close
+		end
+	rescue
 	end
 	
 	return [game, success]
@@ -111,13 +137,17 @@ while true
 							raise
 						end
 						
-						clients[clnum].screen_name = message["name"]
+						clients[clnum].screen_name = URI.encode(message["name"])
 					
 					rescue
-						socket.puts(JSON.dump({"type" => "error", "message" => "invalid join"}))
-						STDERR.puts "Invalid join " + socket.peeraddr.to_s
+						begin
+							socket.puts(JSON.dump({"type" => "error", "message" => "invalid join"}))
+							socket.close
+						rescue
+						end
+						
+						STDERR.puts ("Invalid join " + socket.peeraddr.to_s)
 						clients.delete_at(clnum)
-						socket.close
 						next
 					end
 					
