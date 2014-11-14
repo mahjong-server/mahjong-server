@@ -9,11 +9,12 @@ module Mjai
     
     class TCPPlayer < Player
         
-        TIMEOUT_SEC = 600
+        TIMEOUT_SEC = 60
         
         def initialize(socket, name)
           super()
           @socket = socket
+          @closed = false
           self.name = name
         end
         
@@ -21,8 +22,18 @@ module Mjai
           
           begin
             
+            if @closed then
+                return Action.new({:type => :none})
+            end
+            
             puts("server -> player %d\t%s" % [self.id, action.to_json()])
-            @socket.puts(action.to_json())
+            
+            begin
+                @socket.puts(action.to_json())
+            rescue
+                @closed = true
+                return create_action({:type => :error, :message => "(puts) disconnected"})
+            end
             
             if action.type == :error then
                 close()
@@ -36,7 +47,8 @@ module Mjai
                   return Action.from_json(line.chomp(), self.game)
                 else
                   puts("server :  Player %d has disconnected." % self.id)
-                  return Action.new({:type => :none})
+                  @closed = true
+                  return create_action({:type => :error, :message => "(gets) disconnected"})
                 end
             end
             
