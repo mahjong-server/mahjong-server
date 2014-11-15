@@ -44,8 +44,10 @@ module Mjai
         
         def mjson_to_html(mjson_path, html_path)
           
-=begin
           res_dir = File.dirname(__FILE__) + "/../../share/html"
+
+
+=begin
           make("#{res_dir}/js/archive_player.coffee",
               "#{res_dir}/js/archive_player.js",
               "coffee -cb #{res_dir}/js/archive_player.coffee")
@@ -65,12 +67,15 @@ module Mjai
           html = ERB.new(File.read("#{res_dir}/views/archive_player.erb"), nil, "<>").
               result(binding)
           open(html_path, "w"){ |f| f.write(html) }
+          
+=begin
           for src_path in Dir["#{res_dir}/css/*.css"] + Dir["#{res_dir}/js/*.js"]
             exp = Regexp.new("^%s\\/" % Regexp.escape(res_dir))
             dest_path = src_path.gsub(exp){ "#{html_path}.files/" }
             FileUtils.mkdir_p(File.dirname(dest_path))
             FileUtils.cp(src_path, dest_path)
           end
+=end
           
         end
         
