@@ -113,22 +113,39 @@ while true
 			if socket == server then
 				# accept
 				cl = server.accept
-				cl.sync = true
-				cl.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
-				clients.push( Client.new(cl, nil, ClientStatus::ACCEPTED) )
-				STDERR.puts "Accepted " + cl.peeraddr.to_s
 				
-				cl.puts(JSON.dump({"type" => "hello", "protocol" => "mjsonp", "protocol_version" => 1}))
+				begin
+					cl.sync = true
+					cl.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
+					STDERR.puts "Accepted " + cl.peeraddr.to_s
+					cl.puts(JSON.dump({"type" => "hello", "protocol" => "mjsonp", "protocol_version" => 1}))
+					
+					clients.push( Client.new(cl, nil, ClientStatus::ACCEPTED) )
+				rescue
+					cl.close
+				end
 			else
-				line = socket.gets
 				clnum = clients.index{|c| c.socket == socket}
+				begin
+					line = socket.gets
+				rescue
+					line = ""
+				end
 				
 				if !line then
-					STDERR.puts "Disconnected " + socket.peeraddr.to_s
+					addr = "unknown"
+					begin
+						addr = socket.peeraddr.to_s
+					rescue
+					end
+					
+					STDERR.puts "Disconnected " + addr
 					clients.delete_at(clnum)
 					socket.close
 					next
 				end
+				
+				p line
 				
 				if clients[clnum].status == ClientStatus::ACCEPTED then
 					begin
@@ -140,13 +157,15 @@ while true
 						clients[clnum].screen_name = URI.encode(message["name"])
 					
 					rescue
+						addr = "unknown"
 						begin
 							socket.puts(JSON.dump({"type" => "error", "message" => "invalid join"}))
-							socket.close
+							addr = socket.peeraddr.to_s
 						rescue
 						end
 						
-						STDERR.puts ("Invalid join " + socket.peeraddr.to_s)
+						STDERR.puts ("Invalid join " + addr)
+						socket.close
 						clients.delete_at(clnum)
 						next
 					end
