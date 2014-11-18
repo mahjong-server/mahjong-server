@@ -9,7 +9,7 @@ module Mjai
     
     class TCPPlayer < Player
         
-        TIMEOUT_SEC = 60
+        TIMEOUT_SEC = 600
         
         def initialize(socket, name)
           super()
@@ -39,9 +39,13 @@ module Mjai
                 close()
             else
                 line = nil
-                Timeout.timeout(TIMEOUT_SEC) do
-                  line = @socket.gets()
+                begin
+                    Timeout.timeout(TIMEOUT_SEC) do
+                      line = @socket.gets()
+                    end
+                rescue
                 end
+                
                 if line
                   puts("server <- player %d\t%s" % [self.id, line])
                   return Action.from_json(line.chomp(), self.game)
