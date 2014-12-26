@@ -89,6 +89,8 @@ module TransMaujong
     TOPOYAAGARIEND = 25
     KIRIAGE_MANGAN = 26
     DBLRONCHONBO   = 27
+
+    NOTCARED       = 0xffff_ffff
   end
 
   module MJEK
@@ -98,8 +100,8 @@ module TransMaujong
   end
 
   module MJST
-    INKYOKU
-    BASHOGIME
+    INKYOKU   = 1
+    BASHOGIME = 2
   end
 
   module MJKS
@@ -108,15 +110,19 @@ module TransMaujong
   end
 
   class Mjai::Pai
+    @@offset_map = {"m" => 0, "p" => 9 , "s" => 18, "t" => 27}
+
     # Mjai::Pai -> Pai number
-    def to_i(struct_type = 0)
-      @@offset_map = {"m" => 0, "p" => 9 , "s" => 18, "t" => 27}
-
-      red_offset = (struct_type == 1 && @red) ? 64 : 0
-
+    def to_i
       # Maujong defines pai's id below
       # 1m, ..., 9m, 1p, ..., 9p, 1s, ..., 9s,  E,  S,  W,  N,  P,  F,  C
       #  0, ...,  8,  9, ..., 17, 18, ..., 26, 27, 28, 29, 30, 31, 32, 33
+      @number + @@offset_map[@type] - 1
+    end
+
+    def to_i_r
+      red_offset = (@red) ? 64 : 0
+
       @number + @@offset_map[@type] - 1 + red_offset
     end
 
@@ -170,6 +176,20 @@ module TransMaujong
       end
 
       return [furo_type, mentsu.pais.map(&:to_i).min]
+    end
+
+    def type_in_mau
+      mentsu = self.to_mentsu
+
+      case mentsu.type
+      when :shuntsu then :minshun
+      when :kotsu   then :minko
+      when :kantsu  then
+        case mentsu.visibility
+        when :an    then :ankan
+        when :min   then :minkan
+        end
+      end
     end
 
     def self.from_i(pai_number, type)
