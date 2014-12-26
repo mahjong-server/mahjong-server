@@ -1,0 +1,192 @@
+require 'mjai/pai.rb'
+
+module TransMaujong
+  module MJPI
+    INITIALIZE     =  1
+    SUTEHAI        =  2
+    ONACTION       =  3
+    STARTGAME      =  4
+    STARTKYOKU     =  5
+    ENDKYOKU       =  6
+    ENDGAME        =  7
+    DESTROY        =  8
+    YOURNAME       =  9
+    CREATEINSTANCE = 10
+    BASHOGIME      = 11
+    ISEXCHANGEABLE = 12
+    ONEXCHANGE     = 13
+  end
+
+  module MJMI
+    GETTEHAI         =  1
+    GETKAWA          =  2
+    GETDORA          =  3
+    GETSCORE         =  4
+    GETHONBA         =  5
+    GETREACHBOU      =  6
+    GETRULE          =  7
+    GETVERSION       =  8
+    GETMACHI         =  9
+    GETAGARITEN      = 10
+    GETHAIREMAIN     = 11
+    GETVISIBLEHAIS   = 12
+    FUKIDASHI        = 13
+    KKHAIABILITY     = 14
+    GETWAREME        = 15
+    SETSTRUCTTYPE    = 16
+    SETAUTOFUKIDASHI = 17
+    LASTTSUMOGIRI    = 18
+    SSPUTOABILITY    = 19
+    GETYAKUHAN       = 20
+    GETKYOKU         = 21
+    GETKAWAEX        = 22
+    ANKANABILITY     = 23
+  end
+
+  module MJPIR
+    NO_AKA5   = 0x0000_0001
+    HAI_MASK  = 0x0000_00ff
+    NAKI_MASK = 0xffff_ff00
+    SUTEHAI   = 0x0000_0100
+    REACH     = 0x0000_0200
+    KAN       = 0x0000_0400
+    TSUMO     = 0x0000_0800
+    NAGASHI   = 0x0000_1000
+    PON       = 0x0000_2000
+    CHII1     = 0x0000_4000
+    CHII2     = 0x0000_8000
+    CHII3     = 0x0001_0000
+    MINKAN    = 0x0002_0000
+    ANKAN     = 0x0004_0000
+    RON       = 0x0008_0000
+    ERROR     = 0x8000_0000
+  end
+
+  module MJRL
+    KUITAN         =  1
+    KANSAKI        =  2
+    PAO            =  3
+    RON            =  4
+    MOCHITEN       =  5
+    BUTTOBI        =  6
+    WAREME         =  7
+    AKA5           =  8
+    SHANYU         =  9
+    SHANYU_SCORE   = 10
+    KUINAOSHI      = 11
+    AKA5S          = 12
+    URADORA        = 13
+    SCORE0REACH    = 14
+    RYANSHIBA      = 15
+    DORAPLUS       = 16
+    FURITEN_REACH  = 17
+    NANNYU         = 18
+    NANNYU_SCORE   = 19
+    KARATEN        = 20
+    PINZUMO        = 21
+    NOTENOYANAGARE = 22
+    KANINREACH     = 24
+    TOPOYAAGARIEND = 25
+    KIRIAGE_MANGAN = 26
+    DBLRONCHONBO   = 27
+  end
+
+  module MJEK
+    AGARI    = 1
+    RYUKYOKU = 2
+    CHONBO   = 3
+  end
+
+  module MJST
+    INKYOKU
+    BASHOGIME
+  end
+
+  module MJKS
+    REACH = 1
+    NAKI  = 2
+  end
+
+  class Mjai::Pai
+    # Mjai::Pai -> Pai number
+    def to_i(struct_type = 0)
+      @@offset_map = {"m" => 0, "p" => 9 , "s" => 18, "t" => 27}
+
+      red_offset = (struct_type == 1 && @red) ? 64 : 0
+
+      # Maujong defines pai's id below
+      # 1m, ..., 9m, 1p, ..., 9p, 1s, ..., 9s,  E,  S,  W,  N,  P,  F,  C
+      #  0, ...,  8,  9, ..., 17, 18, ..., 26, 27, 28, 29, 30, 31, 32, 33
+      @number + @@offset_map[@type] - 1 + red_offset
+    end
+
+    # Pai number -> Mjai::Pai
+    def self.from_i(pai_number)
+      red  = false
+      type = nil
+
+      # number of red hais is added by 64
+      if [68, 77, 86].include?(pai_number) then
+        red = true
+        pai_number = pai_number - 64
+      end
+
+      case pai_number
+      when 0..8
+        pai_number = pai_number -  0 + 1
+        type = "m"
+      when 9..17
+        pai_number = pai_number -  9 + 1
+        type = "p"
+      when 18..26
+        pai_number = pai_number - 18 + 1
+        type = "s"
+      when 27..33 
+        pai_number = pai_number - 27 + 1
+        type = "t"
+      else 
+        raise(ArgumentError, "wrong pai number: #{pai_number}")
+      end
+
+      Mjai::Pai.new(type, pai_number, red)
+    end
+  end
+
+  class Mjai::Furo
+    # returns pair whose 1st element is furo type, 2nd element is pai number of the pais that consist of furo
+    # in the case of minshun, 2nd element is the minimum number among the pais
+    def to_pair
+      mentsu = self.to_mentsu
+
+      furo_type =
+        case mentsu.type
+        when :shuntsu then :minshun
+        when :kotsu   then :minko
+        when :kantsu  then
+          case mentsu.visibility
+          when :an    then :ankan
+          when :min   then :minkan
+          end
+      end
+
+      return [furo_type, mentsu.pais.map(&:to_i).min]
+    end
+
+    def self.from_i(pai_number, type)
+      taken_pai = Mjai::Pai::from_i(pai_number)
+
+      consumed_pais = case type
+      when :minshun
+        [taken_pai.succ, taken_pai.succ.succ]
+      when :minko
+        [Mjai::Pai::from_i(pai_number)] * 2
+      when :minkan, :ankan
+        [Mjai::Pai::from_i(pai_number)] * 3
+      else
+        raise(ArgumentError, "wrong type: #{type}")
+      end
+
+      Mjai::Furo.new({:type => type, :taken => taken_pai, :consumed => consumed_pais, :target => 0})
+    end
+  end
+end
