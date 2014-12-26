@@ -1,9 +1,9 @@
-// u‚Ü‚¤‚¶‚á‚ñv—p‘Îí‘Šèƒvƒ‰ƒOƒCƒ“
-//     u‚Ä‚¡‚é‚Æv
-// @@@@@@@@@@@@Î”¨ ‹±•½
-#include <windows.h>
+// ã€Œã¾ã†ã˜ã‚ƒã‚“ã€ç”¨å¯¾æˆ¦ç›¸æ‰‹ãƒ—ãƒ©ã‚°ã‚¤ãƒ³
+//     ã€Œã¦ãƒã‚‹ã¨ã€
+// ã€€ã€€ã€€ã€€ã€€ã€€ã€€ã€€ã€€ã€€ã€€ã€€çŸ³ç•‘ æ­å¹³
 #include <stdio.h>
-#include "../MIPIface.h"
+#include "pseudo_windows.h"
+#include "MIPIface.h"
 
 
 class Tilt {
@@ -45,12 +45,12 @@ protected :
 
 int Tilt::kyoku,Tilt::kaze;
 
-TCHAR player_name[] = TEXT("‚Ä‚¡‚é‚Æ");
+TCHAR player_name[] = TEXT("Tilt");
 
-UINT (WINAPI *MJSendMessage)(Tilt*,UINT,UINT,UINT);
+UINT (*MJSendMessage)(Tilt*,UINT,UINT,UINT);
 
 
-// è”v‚Ì’†‚©‚ç”CˆÓ‚Ì”v‚ğŒ©‚Â‚¯A‚»‚ÌˆÊ’u‚ğ•Ô‚·
+// æ‰‹ç‰Œã®ä¸­ã‹ã‚‰ä»»æ„ã®ç‰Œã‚’è¦‹ã¤ã‘ã€ãã®ä½ç½®ã‚’è¿”ã™
 int Tilt::search(int obj,int start,int mask)
 {
 	while(start<(int)tehai.tehai_max){
@@ -60,88 +60,171 @@ int Tilt::search(int obj,int start,int mask)
 	return start<(int)tehai.tehai_max ? start : -1;
 }
 
-// “–‚½‚è”v‚ğ’²‚×A”z—ñmachi‚É“ü‚ê‚éB
-// ‚Ü‚½’£‚Á‚Ä‚¢‚é‚©‚Ç‚¤‚©’²‚×‚Ätenpai_flag‚ğƒZƒbƒg‚·‚éB
+// å½“ãŸã‚Šç‰Œã‚’èª¿ã¹ã€é…åˆ—machiã«å…¥ã‚Œã‚‹ã€‚
+// ã¾ãŸå¼µã£ã¦ã„ã‚‹ã‹ã©ã†ã‹èª¿ã¹ã¦tenpai_flagã‚’ã‚»ãƒƒãƒˆã™ã‚‹ã€‚
 void Tilt::set_machi(void)
 {
-	int i,j,cnt;
-	(*MJSendMessage)(this,MJMI_GETMACHI,0,(UINT)machi);
+    fprintf(stderr, "[set_machi]\n");
+
+	(*MJSendMessage)(this, MJMI_GETMACHI, 0, (UINT)&machi);
 	tenpai_flag = 0;
-	for(i=0;i<34;i++){
+
+    fprintf(stderr, "waiting tiles are: ");
+	for (int i = 0; i < 34; ++ i) {
+        fprintf(stderr, "%d ", machi[i]);
+
 		if (machi[i]) {
-			cnt = 0;
-			for(j=0;j<(int)tehai.tehai_max;j++) if ((int)tehai.tehai[j]==i) cnt++;
-			if (cnt+(*MJSendMessage)(this,MJMI_GETVISIBLEHAIS,i,0)<4){
+			int cnt = 0;
+			for (int j = 0; j < (int) tehai.tehai_max; ++ j) {
+				if ((int)tehai.tehai[j] == i) {
+					++ cnt;
+				}
+			}
+			if (cnt + (*MJSendMessage)(this, MJMI_GETVISIBLEHAIS, i, 0) < 4) {
 				tenpai_flag = 1;
 				return;
 			}
 			tenpai_flag = -1;
 		}
 	}
+    fprintf(stderr, "\n");
+
+    fprintf(stderr, "[end of set_machi]\n");
 }
 
-// è”v‚Ì•Ï”tehai‚Æte_cnt‚ğƒZƒbƒg‚·‚é
+void print_tehai(const MJITehai& tehai) {
+    fprintf(stderr, "tehai is:\n");
+
+    for (int i = 0; i < tehai.tehai_max; ++ i) {
+        fprintf(stderr, "%llu ", tehai.tehai[i]);
+    }
+
+    fprintf(stderr, "\n");
+
+    for (int i = 0; i < tehai.minshun_max; ++ i) {
+        fprintf(stderr, "%llu ", tehai.minshun[i]);
+    }
+
+    fprintf(stderr, "\n");
+
+    for (int i = 0; i < tehai.minkou_max; ++ i) {
+        fprintf(stderr, "%llu ", tehai.minkou[i]);
+    }
+
+    fprintf(stderr, "\n");
+
+    for (int i = 0; i < tehai.minkan_max; ++ i) {
+        fprintf(stderr, "%llu ", tehai.minkan[i]);
+    }
+
+    fprintf(stderr, "\n");
+
+    for (int i = 0; i < tehai.ankan_max; ++ i) {
+        fprintf(stderr, "%llu ", tehai.ankan[i]);
+    }
+
+    fprintf(stderr, "\n");
+}
+
+// æ‰‹ç‰Œã®å¤‰æ•°tehaiã¨te_cntã‚’ã‚»ãƒƒãƒˆã™ã‚‹
 void Tilt::set_tehai(void)
 {
-	int i;
-	(*MJSendMessage)(this,MJMI_GETTEHAI,0,(UINT)&tehai);
-	for(i=0;i<34;i++) te_cnt[i] = 0;
-	for(i=0;i<(int)tehai.tehai_max;i++) te_cnt[tehai.tehai[i]]++;
+    fprintf(stderr, "[set_tehai]\n");
+
+    fprintf(stderr, "call MJSendMessage: MJMI_GETTEHAI\n");
+    fprintf(stderr, "function addr: %p, tehai addr: %p, instance addr: %p\n", MJSendMessage, &tehai, this);
+	(*MJSendMessage)(this, MJMI_GETTEHAI, 0, (UINT)&tehai);
+    fprintf(stderr, "end MJSendMessage: MJMI_GETTEHAI\n");
+
+    print_tehai(tehai);
+
+	for (int i = 0; i < 34; ++ i) {
+		te_cnt[i] = 0;
+	}
+
+	for (int i = 0; i < (int) tehai.tehai_max; ++ i) {
+		++ te_cnt[tehai.tehai[i]];
+	}
+
+    fprintf(stderr, "[end of set_tehai]\n");
 }
 
-// Ì‚Ä”v‚Ìˆ—
-// tsumohai : ¡‚Â‚à‚Á‚Ä‚«‚½”v
+// æ¨ã¦ç‰Œæ™‚ã®å‡¦ç†
+// tsumohai : ä»Šã¤ã‚‚ã£ã¦ããŸç‰Œ
 UINT Tilt::sutehai_sub(int tsumohai)
 {
-	int mc[34];
-	UINT rchk=MJPIR_SUTEHAI;
-	int i,hai,del_hai,hai_remain;
+    fprintf(stderr, "[sutehai_sub] drawn: %d\n", tsumohai);
 
-	// Œ»İ‚Ìè”v‚Ìó‘Ô‚ğƒZƒbƒg‚·‚é
+	int mc[34] = {};
+	UINT rchk=MJPIR_SUTEHAI;
+	int hai,del_hai,hai_remain;
+
+	// ç¾åœ¨ã®æ‰‹ç‰Œã®çŠ¶æ…‹ã‚’ã‚»ãƒƒãƒˆã™ã‚‹
 	set_tehai();
 	
-	// Œ»İ‚Ì‘Ò‚¿”v‚ğæ“¾‚·‚é
+	// ç¾åœ¨ã®å¾…ã¡ç‰Œã‚’å–å¾—ã™ã‚‹
 	set_machi();
 
-	// ƒcƒ‚‚Á‚½ê‡‚Íuƒcƒ‚v‚é
+	// ãƒ„ãƒ¢ã£ãŸå ´åˆã¯ã€Œãƒ„ãƒ¢ã€ã‚‹
 	if (tsumohai>=0 && tsumohai<34) if (machi[tsumohai]) return MJPIR_TSUMO;
 
-	// ƒŠ[ƒ`‚ğ‚©‚¯‚Ä‚¢‚éê‡‚Íuƒcƒ‚Ø‚èv
+	// ãƒªãƒ¼ãƒã‚’ã‹ã‘ã¦ã„ã‚‹å ´åˆã¯ã€Œãƒ„ãƒ¢åˆ‡ã‚Šã€
 	if (reach_flag[0]) return MJPIR_SUTEHAI | 13;
 
-	// ‹ãí‹ã”v‚Å—¬‚¹‚éê‡‚Í—¬‚·
+	// ä¹ç¨®ä¹ç‰Œã§æµã›ã‚‹å ´åˆã¯æµã™
 	if ((*MJSendMessage)(this,MJMI_KKHAIABILITY,0,0)) return MJPIR_NAGASHI;
 	
-	// ‚à‚µƒcƒ‚‚Á‚Ä‚«‚½”v‚ª‚ ‚é‚È‚çA‚»‚Ì”v‚ğ“ü‚ê‚é
+	// ã‚‚ã—ãƒ„ãƒ¢ã£ã¦ããŸç‰ŒãŒã‚ã‚‹ãªã‚‰ã€ãã®ç‰Œã‚’å…¥ã‚Œã‚‹
 	if (tsumohai>=0 && tsumohai<34) te_cnt[tsumohai]++;
 	
-	// Ì‚Ä‚é”v‚ğŒˆ‚ß‚é
+	// æ¨ã¦ã‚‹ç‰Œã‚’æ±ºã‚ã‚‹
 	hai = calc_sutehai();
-	if (hai<(int)tehai.tehai_max) del_hai = tehai.tehai[hai]; else del_hai = tsumohai;
+	if (hai < (int)tehai.tehai_max) {
+        del_hai = tehai.tehai[hai];
+    }
+    else {
+        del_hai = tsumohai;
+    }
 	
-	// –å‘O‚ÅAƒeƒ“ƒp‚Á‚½ê‡‚ÍƒŠ[ƒ`‚ğ‚©‚¯‚æ‚¤‚©‚È‚ŸH
-	if (menzen){
-		if (hai<(int)tehai.tehai_max){
+	// é–€å‰ã§ã€ãƒ†ãƒ³ãƒ‘ã£ãŸå ´åˆã¯ãƒªãƒ¼ãƒã‚’ã‹ã‘ã‚ˆã†ã‹ãªãï¼Ÿ
+	if (menzen) {
+		if (hai<(int)tehai.tehai_max) {
 			tehai.tehai[hai] = tsumohai;
 		}
+        fprintf(stderr, "[call MJSendMessage/MJMI_GETHAIREMAIN]\n");
 		hai_remain = (*MJSendMessage)(this,MJMI_GETHAIREMAIN,0,0);
-		tenpai_flag = (*MJSendMessage)(this,MJMI_GETMACHI,(UINT)&tehai,(UINT)mc);
-		for(i=0;i<34;i++){
-			if (mc[i]){
+        fprintf(stderr, "[end of MJMI_GETHAIREMAIN] returns %d\n", hai_remain);
+
+        fprintf(stderr, "[call MJSendMessage/MJMI_GETMACHI]\n");
+		tenpai_flag = (*MJSendMessage)(this,MJMI_GETMACHI,(UINT) &tehai, (UINT) mc);
+        fprintf(stderr, "[end of MJMI_GETMACHI] returns %d\n", tenpai_flag);
+
+		for (int i = 0; i < 34; ++ i) {
+			if (mc[i]) {
 				if (te_cnt[i]+(*MJSendMessage)(this,MJMI_GETVISIBLEHAIS,i,0)<4){
 					if (hai_remain>60){ rchk = MJPIR_REACH; break;}
-					if (!(*MJSendMessage)(this,MJMI_GETAGARITEN,(UINT)&tehai,i)){ rchk = MJPIR_REACH; break;}
+
+                    fprintf(stderr, "[call MJSendMessage/MJMI_GETAGARITEN]\n");
+                    UINT ret = (*MJSendMessage)(this,MJMI_GETAGARITEN,(UINT) &tehai,i);
+                    fprintf(stderr, "[end of MJMI_GETAGARITEN] returns %llu\n", ret);
+
+					if (!ret) { 
+                        rchk = MJPIR_REACH; 
+                        break;
+                    }
 				}
 			}
 		}
 	}
 
-	// Šeíƒtƒ‰ƒO‚ÌƒZƒbƒg
+	// å„ç¨®ãƒ•ãƒ©ã‚°ã®ã‚»ãƒƒãƒˆ
 	if (rchk==MJPIR_REACH) reach_flag[0] = 1;
+    fprintf(stderr, "[end of sutehai_sub] returns %d\n", hai|rchk);
+
 	return hai|rchk;
 }
 
-// è”v‚ğ•”•ª“I‚É•]‰¿‚·‚é
+// æ‰‹ç‰Œã‚’éƒ¨åˆ†çš„ã«è©•ä¾¡ã™ã‚‹
 int Tilt::eval_tehai_sub(int atama_flag)
 {
 	int p=0,sc_max=0,sc,kazu,chk;
@@ -206,7 +289,7 @@ int Tilt::eval_tehai_sub(int atama_flag)
 	return sc_max;
 }
 
-// è”v‚ğ•]‰¿‚µ‚Ä•]‰¿’l‚ğ•Ô‚·
+// æ‰‹ç‰Œã‚’è©•ä¾¡ã—ã¦è©•ä¾¡å€¤ã‚’è¿”ã™
 int Tilt::eval_tehai(void)
 {
 	int ret = eval_tehai_sub(0);
@@ -218,10 +301,10 @@ int Tilt::eval_tehai(void)
 	return ret;
 }
 
-// ”v‚ğ•]‰¿‚µ‚Ä•]‰¿’l‚ğ•Ô‚·
+// ç‰Œã‚’è©•ä¾¡ã—ã¦è©•ä¾¡å€¤ã‚’è¿”ã™
 int Tilt::eval_hai(int hai)
 {
-	int ret = 0,j,doras;
+	int ret = 0,doras;
 	UINT dora[6];
 
 	if (hai<27) ret++; else {
@@ -229,13 +312,18 @@ int Tilt::eval_hai(int hai)
 			if (hai>30 || hai==cha+27 || hai==kaze+27) ret++;
 	}
 
-	doras = (*MJSendMessage)(this,MJMI_GETDORA,(UINT)dora,0);
-	for(j=0;j<doras;j++)
-		if (hai==(int)dora[j]) ret++;
+	doras = (*MJSendMessage)(this,MJMI_GETDORA,(UINT)&dora,0);
+
+	for (int j = 0; j < doras; ++ j) {
+		if (hai == (int)dora[j]) {
+			++ ret;
+		}
+	}
+
 	return ret;
 }
 
-// Ì‚Ä”v‚ğ•]‰¿‚µ‚Ä•]‰¿’l‚ğ•Ô‚·
+// æ¨ã¦ç‰Œã‚’è©•ä¾¡ã—ã¦è©•ä¾¡å€¤ã‚’è¿”ã™
 int Tilt::eval_sutehai(int hai)
 {
 	int i,ret = 0;
@@ -253,9 +341,10 @@ int Tilt::eval_sutehai(int hai)
 	return ret;
 }
 
-// Ì‚Ä‚é”v‚ğŒˆ‚ß‚é
+// æ¨ã¦ã‚‹ç‰Œã‚’æ±ºã‚ã‚‹
 int Tilt::calc_sutehai(void)
 {
+    fprintf(stderr, "[calc_sutehai]\n");
 	int i,ret;
 
 	/*for(i=27;i<34;i++) if (te_cnt[i]==1) {
@@ -273,7 +362,7 @@ int Tilt::calc_sutehai(void)
 		return ret>=0 ? ret : 13;
 	}*/
 
-	// Ì‚Ä‚é”v‚ğˆê‚Âˆê‚Â‚µ‚Ä‚İ‚ÄA‚à‚Á‚Æ‚à•]‰¿’l‚Ì‚‚¢‚à‚Ì‚ğ‚Æ‚é
+	// æ¨ã¦ã‚‹ç‰Œã‚’ä¸€ã¤ä¸€ã¤è©¦ã—ã¦ã¿ã¦ã€ã‚‚ã£ã¨ã‚‚è©•ä¾¡å€¤ã®é«˜ã„ã‚‚ã®ã‚’ã¨ã‚‹
 	int sc_max = -1,sc,sh,scc,scc_max=-1;
 	for(i=0;i<34;i++){
 		if (!te_cnt[i]) continue;
@@ -287,19 +376,21 @@ int Tilt::calc_sutehai(void)
 	tehai_score = sc_max;
 	ret = search(sh,0,0);
 
+    fprintf(stderr, "[end of calc_sutehai]\n");
+
 	return ret>=0 ? ret : 13;
 }
 
-// –Â‚­‚±‚Æ‚ª‚Å‚«‚é‚©‚Ç‚¤‚©’²‚×‚é
-// hai : ‘ÎÛ‚Ì”v
-// chii_flag : ƒ`[‚É‚Â‚¢‚Ä‚àƒ`ƒFƒbƒN‚·‚é‚©‚Ç‚¤‚©
-// return : ˆÈ‰º‚Ì’l‚Ì˜_—˜a
-//		 1 : ƒ|ƒ“‚Å‚«‚é
-//		 2 : ƒJƒ“‚Å‚«‚é
-//		 4 : ƒ`[‚Pi¶j‚Å‚«‚é
-//		 8 : ƒ`[‚Qi‰Ej‚Å‚«‚é
-//		16 : ƒ`[‚Ri’†j‚Å‚«‚é
-//		32 : ƒƒ“‚Å‚«‚é
+// é³´ãã“ã¨ãŒã§ãã‚‹ã‹ã©ã†ã‹èª¿ã¹ã‚‹
+// hai : å¯¾è±¡ã®ç‰Œ
+// chii_flag : ãƒãƒ¼ã«ã¤ã„ã¦ã‚‚ãƒã‚§ãƒƒã‚¯ã™ã‚‹ã‹ã©ã†ã‹
+// return : ä»¥ä¸‹ã®å€¤ã®è«–ç†å’Œ
+//		 1 : ãƒãƒ³ã§ãã‚‹
+//		 2 : ã‚«ãƒ³ã§ãã‚‹
+//		 4 : ãƒãƒ¼ï¼‘ï¼ˆå·¦ï¼‰ã§ãã‚‹
+//		 8 : ãƒãƒ¼ï¼’ï¼ˆå³ï¼‰ã§ãã‚‹
+//		16 : ãƒãƒ¼ï¼“ï¼ˆä¸­ï¼‰ã§ãã‚‹
+//		32 : ãƒ­ãƒ³ã§ãã‚‹
 int Tilt::nakability(int hai,int chii_flag)
 {
 	int x,ret=0,kazu;
@@ -334,10 +425,10 @@ int Tilt::nakability(int hai,int chii_flag)
 	return ret;
 }
 
-// ‘¼‰Æ‚ÌÌ‚Ä”v‚É‘Î‚·‚éƒAƒNƒVƒ‡ƒ“‚ğŒˆ‚ß‚é
-// no : ‚¾‚ê‚ªÌ‚Ä‚½‚©
-// hai : ‰½‚ğÌ‚Ä‚½‚©
-// return : ƒAƒNƒVƒ‡ƒ“
+// ä»–å®¶ã®æ¨ã¦ç‰Œã«å¯¾ã™ã‚‹ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã‚’æ±ºã‚ã‚‹
+// no : ã ã‚ŒãŒæ¨ã¦ãŸã‹
+// hai : ä½•ã‚’æ¨ã¦ãŸã‹
+// return : ã‚¢ã‚¯ã‚·ãƒ§ãƒ³
 UINT Tilt::koe_req(int no,int hai)
 {
 	int chii_flag,sc;
@@ -401,11 +492,12 @@ UINT Tilt::koe_req(int no,int hai)
 	return 0;
 }
 
-// ‹ÇŠJn‚Ìˆ—
-// k : ‹Ç
-// c : ‰Æ
+// å±€é–‹å§‹æ™‚ã®å‡¦ç†
+// k : å±€
+// c : å®¶
 UINT Tilt::on_start_kyoku(int k,int c)
 {
+	fprintf(stderr, "kyoku started (Kyoku #: %d, Seat: %d)\n", k, c);
 	int i,j;
 	set_tehai();
 	for(i=0;i<34;i++) {
@@ -423,18 +515,19 @@ UINT Tilt::on_start_kyoku(int k,int c)
 	return 0;
 }
 
-// ‹ÇI—¹‚Ìˆ—
-// reason : I—¹‚µ‚½——R
-// inc_sc : “_”‚Ì•Ï‰»
+// å±€çµ‚äº†æ™‚ã®å‡¦ç†
+// reason : çµ‚äº†ã—ãŸç†ç”±
+// inc_sc : ç‚¹æ•°ã®å¤‰åŒ–
 UINT Tilt::on_end_kyoku(UINT reason,LONG* inc_sc)
 {
-	if (*inc_sc>5000) (*MJSendMessage)(this,MJMI_FUKIDASHI,(UINT)TEXT("‚æ‚µ‚æ‚µc"),0);
+	if (*inc_sc>5000) (*MJSendMessage)(this,MJMI_FUKIDASHI,*(UINT*)TEXT("kyoku ended"),0);
 	return 0;
 }
 
-// ƒAƒNƒVƒ‡ƒ“‚É‘Î‚·‚é‰“š‚ğ‚·‚é
+// ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã«å¯¾ã™ã‚‹å¿œç­”ã‚’ã™ã‚‹
 UINT Tilt::on_action(int player,int taishou,UINT action)
 {
+    fprintf(stderr, "[on_action]\n");
 	int hai = action&63;
 
 	if (action & MJPIR_REACH) reach_flag[player] = 1;
@@ -445,7 +538,7 @@ UINT Tilt::on_action(int player,int taishou,UINT action)
 		return koe_req(player,hai);
 	}
 	if ((action & MJPIR_RON) && taishou==0){
-		(*MJSendMessage)(this,MJMI_FUKIDASHI,(UINT)TEXT("‚¤‚Ác"),0);
+		(*MJSendMessage)(this,MJMI_FUKIDASHI,*(UINT*)TEXT("ron"),0);
 	}
 	if ((action & MJPIR_PON) && player==0){
 		nakiok_flag = 1;
@@ -463,29 +556,30 @@ UINT Tilt::on_action(int player,int taishou,UINT action)
 	if ((action & MJPIR_MINKAN) && player==0){
 		menzen = 0;
 	}
+    fprintf(stderr, "[end of on_action]\n");
 	return 0;
 }
 
-// ”¼‘‘ŠJn‚Ìˆ—
+// åŠè˜é–‹å§‹æ™‚ã®å‡¦ç†
 UINT Tilt::on_start_game(void)
 {
 	return 0;
 }
 
-// ”¼‘‘I—¹‚Ìˆ—
-// rank : ‡ˆÊ
-// score : “_”
+// åŠè˜çµ‚äº†æ™‚ã®å‡¦ç†
+// rank : é †ä½
+// score : ç‚¹æ•°
 UINT Tilt::on_end_game(int rank,LONG score)
 {
 	/*char str[40];
-	sprintf(str,"%d“_A%dˆÊ‚©c",score,rank+1);
+	sprintf(str,"%dç‚¹ã€%dä½ã‹â€¦",score,rank+1);
 	(*MJSendMessage)(this,MJMI_FUKIDASHI,(UINT)str,0);*/
 	return 0;
 }
 
-// “r’†Q‰Á‚Ìˆ—
-// state : ‚»‚Ì‚Æ‚«‚Ìó‘Ô
-// option : ó‘Ô‚ÉŠÖ˜A‚µ‚Ä‘—‚ç‚ê‚éî•ñ
+// é€”ä¸­å‚åŠ æ™‚ã®å‡¦ç†
+// state : ãã®ã¨ãã®çŠ¶æ…‹
+// option : çŠ¶æ…‹ã«é–¢é€£ã—ã¦é€ã‚‰ã‚Œã‚‹æƒ…å ±
 UINT Tilt::on_exchange(UINT state,UINT option)
 {
 	if (state==MJST_INKYOKU){
@@ -497,7 +591,7 @@ UINT Tilt::on_exchange(UINT state,UINT option)
 
 		MJIKawahai kawa[30];
 		for(i=0;i<4;i++){
-			k = (*MJSendMessage)(this,MJMI_GETKAWAEX,MAKELPARAM(i,30),(UINT)kawa);
+			k = (*MJSendMessage)(this,MJMI_GETKAWAEX,MAKELPARAM(i,30),*(UINT*)kawa);
 			reach_flag[i] = 0;
 			for(j=0;j<k;j++){
 				anpai[kawa[j].hai&63][j] = 1;
@@ -517,7 +611,7 @@ UINT Tilt::on_exchange(UINT state,UINT option)
 	return 0;
 }
 
-// ƒCƒ“ƒXƒ^ƒ“ƒX—p‚ÌƒCƒ“ƒ^[ƒtƒF[ƒXŠÖ”
+// ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ç”¨ã®ã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ãƒ¼ã‚¹é–¢æ•°
 UINT Tilt::InterfaceFunc(UINT message,UINT param1,UINT param2)
 {
 	switch(message){
@@ -541,18 +635,21 @@ UINT Tilt::InterfaceFunc(UINT message,UINT param1,UINT param2)
 		MJSendMessage = (UINT (WINAPI *)(Tilt*,UINT,UINT,UINT))param2;
 		return 0;
 	case MJPI_YOURNAME :
-		return (UINT)player_name;
+		return *(UINT*)player_name;
 	case MJPI_DESTROY :
 		return 0;
 	case MJPI_ISEXCHANGEABLE :
-		return 0; // “r’†Q‰Á‚É‘Î‰‚·‚éB‘Î‰‚µ‚½‚­‚È‚¢ê‡‚Í0ˆÈŠO‚É‚·‚éB
+		return 0; // é€”ä¸­å‚åŠ ã«å¯¾å¿œã™ã‚‹ã€‚å¯¾å¿œã—ãŸããªã„å ´åˆã¯0ä»¥å¤–ã«ã™ã‚‹ã€‚
 	}
+
+    fprintf(stderr, "[MJPInterfaceFunc ignores message]\n");
 	return MJR_NOTCARED;
 }
 
-// ƒCƒ“ƒ^[ƒtƒF[ƒXŠÖ”
-UINT WINAPI MJPInterfaceFunc(Tilt* inst,UINT message,UINT param1,UINT param2)
+// ã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ãƒ¼ã‚¹é–¢æ•°
+extern "C" EXPORT UINT WINAPI MJPInterfaceFunc(Tilt* inst,UINT message,UINT param1,UINT param2)
 {
+    fprintf(stderr, "[MJPInterfaceFunc] instance addr: %p\n", inst);
 	if (inst) return inst->InterfaceFunc(message,param1,param2);
 	switch(message){
 	case MJPI_CREATEINSTANCE :
@@ -561,11 +658,11 @@ UINT WINAPI MJPInterfaceFunc(Tilt* inst,UINT message,UINT param1,UINT param2)
 		MJSendMessage = (UINT (WINAPI *)(Tilt*,UINT,UINT,UINT))param2;
 		return 0;
 	case MJPI_YOURNAME :
-		return (UINT)player_name;
+		return *(UINT*)player_name;
 	case MJPI_DESTROY :
 		return 0;
 	case MJPI_ISEXCHANGEABLE :
-		return 0; // “r’†Q‰Á‚É‘Î‰‚·‚éB‘Î‰‚µ‚½‚­‚È‚¢ê‡‚Í0ˆÈŠO‚É‚·‚éB
+		return 0; // é€”ä¸­å‚åŠ ã«å¯¾å¿œã™ã‚‹ã€‚å¯¾å¿œã—ãŸããªã„å ´åˆã¯0ä»¥å¤–ã«ã™ã‚‹ã€‚
 	}
 	return MJR_NOTCARED;
 }
