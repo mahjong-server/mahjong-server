@@ -209,7 +209,7 @@ module Mjai
                   })
                   if elem["owari"]
                     do_action({:type => :end_kyoku})
-                    do_action({:type => :end_game, :scores => points_params[:scores]})
+                    do_action({:type => :end_game, :scores => get_points_params(elem["owari"], true)[:scores] })
                   end
                   return nil
                 when "N"
@@ -234,12 +234,12 @@ module Mjai
               return nil
             end
             
-            def get_points_params(sc_str)
+            def get_points_params(sc_str, is_owari=false)
               sc_nums = sc_str.split(/,/).map(&:to_i)
               result = {}
               result[:deltas] = (0...4).map(){ |i| sc_nums[2 * i + 1] * 100 }
               result[:scores] =
-                  (0...4).map(){ |i| sc_nums[2 * i] * 100 + result[:deltas][i] }
+                  (0...4).map(){ |i| sc_nums[2 * i] * 100 + (is_owari ? 0 : (result[:deltas][i])) }
               return result
             end
             
@@ -425,11 +425,17 @@ module Mjai
         
         include(Util)
         
-        def initialize(path)
+        def initialize(path, type= :gzip)
           super()
           @path = path
-          Zlib::GzipReader.open(path) do |f|
-            @xml = f.read().force_encoding("utf-8")
+          if type == :xml
+              File.open(path) do |f|
+                @xml = f.read().force_encoding("utf-8")
+              end
+          else
+              Zlib::GzipReader.open(path) do |f|
+                @xml = f.read().force_encoding("utf-8")
+              end
           end
         end
         

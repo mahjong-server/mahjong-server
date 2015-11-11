@@ -23,6 +23,8 @@ module Mjai
               dump_archive(src_path, dest_path, :human)
             when [".mjlog", ".mjson"]
               dump_archive(src_path, dest_path, :mjson)
+            when [".xml", ".mjson"]
+              dump_archive(src_path, dest_path, :mjson)
             else
               raise("unsupported ext pair: #{src_ext}, #{dest_ext}")
           end

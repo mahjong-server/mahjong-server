@@ -11,11 +11,13 @@ module Mjai
         def self.load(path)
           case File.extname(path)
             when ".mjlog"
-              return TenhouArchive.new(path)
+              return TenhouArchive.new(path, :gzip)
+            when ".xml"
+              return TenhouArchive.new(path, :xml)
             when ".mjson"
               return MjsonArchive.new(path)
             else
-              raise("unknown format")
+              raise("unknown format " + File.extname(path))
           end
         end
         
