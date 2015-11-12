@@ -93,13 +93,13 @@ class TC_Hora < Test::Unit::TestCase
         :hora_type => :ron,
       }))
       
-      assert(has_yaku?([:sangenpai, 1], {
+      assert(has_yaku?([:sangenpaiP, 1], {
         :tehais => Pai.parse_pais("234678m3477sPPP"),
         :taken => Pai.new("5s"),
         :hora_type => :ron,
       }))
       
-      assert(has_yaku?([:bakaze, 1], {
+      assert(has_yaku?([:bakazeE, 1], {
         :tehais => Pai.parse_pais("123m456p777sP"),
         :furos =>
             [Furo.new({:type => :pon, :taken => Pai.new("E"), :consumed => Pai.parse_pais("EE")})],
@@ -107,7 +107,7 @@ class TC_Hora < Test::Unit::TestCase
         :hora_type => :ron,
       }))
       
-      assert(has_yaku?([:jikaze, 1], {
+      assert(has_yaku?([:jikazeS, 1], {
         :tehais => Pai.parse_pais("123m456p777sP"),
         :furos =>
             [Furo.new({:type => :pon, :taken => Pai.new("S"), :consumed => Pai.parse_pais("SS")})],

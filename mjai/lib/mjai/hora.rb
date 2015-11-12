@@ -233,12 +233,17 @@ module Mjai
               if self.ipeko?
                 add_yaku(:ipeko, 1, 0)
               end
-              add_yaku(:sangenpai, self.num_sangenpais, self.num_sangenpais)
-              if self.bakaze?
-                add_yaku(:bakaze, 1, 1)
+              
+              ["P","F","C"].each{|c|
+                if self.yakuhai?(Pai.new(c))
+                  add_yaku(("sangenpai"+c).to_sym, 1, 1)
+                end
+              }
+              if self.yakuhai?(@hora.bakaze)
+                add_yaku(("bakaze"+@hora.bakaze.to_s).to_sym, 1, 1)
               end
-              if self.jikaze?
-                add_yaku(:jikaze, 1, 1)
+              if self.yakuhai?(@hora.jikaze)
+                add_yaku( ("jikaze"+@hora.jikaze.to_s).to_sym, 1, 1)
               end
               if @hora.rinshan
                 add_yaku(:rinshankaiho, 1, 1)
@@ -389,12 +394,8 @@ module Mjai
               end
             end
             
-            def jikaze?
-              @mentsus.any?(){ |m| [:kotsu, :kantsu].include?(m.type) && m.pais[0] == @hora.jikaze }
-            end
-            
-            def bakaze?
-              @mentsus.any?(){ |m| [:kotsu, :kantsu].include?(m.type) && m.pais[0] == @hora.bakaze }
+            def yakuhai?(hai)
+              @mentsus.any?(){ |m| [:kotsu, :kantsu].include?(m.type) && m.pais[0] == hai }
             end
             
             def sanshoku?(types)

@@ -19,9 +19,9 @@ module Mjai
             YAKU_ID_TO_NAME = [
               :menzenchin_tsumoho, :reach, :ippatsu, :chankan, :rinshankaiho,
               :haiteiraoyue, :hoteiraoyui, :pinfu, :tanyaochu, :ipeko,
-              :jikaze, :jikaze, :jikaze, :jikaze,
-              :bakaze, :bakaze, :bakaze, :bakaze,
-              :sangenpai, :sangenpai, :sangenpai,
+              :jikazeE, :jikazeS, :jikazeW, :jikazeN,
+              :bakazeE, :bakazeS, :bakazeW, :bakazeN,
+              :sangenpaiP, :sangenpaiF, :sangenpaiC,
               :double_reach, :chitoitsu, :honchantaiyao, :ikkitsukan, :sanshokudojun,
               :sanshokudoko, :sankantsu, :toitoiho, :sananko, :shosangen, :honroto,
               :ryanpeko, :junchantaiyao, :honiso,
