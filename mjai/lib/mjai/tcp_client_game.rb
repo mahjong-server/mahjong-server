@@ -40,7 +40,7 @@ module Mjai
                   if action_obj["type"] == "start_game"
                     @my_id = action_obj["id"]
                     self.players = Array.new(4) do |i|
-                      i == @my_id ? @params[:player] : PuppetPlayer.new()
+                      i == @my_id ? @params[:player] : PuppetPlayer.new(i)
                     end
                   end
                   action = Action.from_json(action_json, self)

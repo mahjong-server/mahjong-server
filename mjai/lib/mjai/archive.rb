@@ -22,8 +22,12 @@ module Mjai
         end
         
         def initialize()
-          super((0...4).map(){ PuppetPlayer.new() })
+          super((0...4).map(){ |i| PuppetPlayer.new(i) })
           @actions = nil
+        end
+        
+        def trimnewdora!()
+          @actions = self.actions.select! { |a| a.type != :dora }
         end
         
         def each_action(&block)

@@ -23,6 +23,10 @@ module Mjai
             do_action(action)
           end
         end
+        
+        def actions()
+          return @raw_actions
+        end
 
     end
     

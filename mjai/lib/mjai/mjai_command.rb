@@ -7,6 +7,9 @@ require "mjai/shanten_player"
 require "mjai/file_converter"
 require "mjai/game_stats"
 
+require "mjai/replay_game"
+require "mjai/archive"
+
 
 module Mjai
     
@@ -51,6 +54,8 @@ module Mjai
                   server.run()
                 when "convert"
                   FileConverter.new().convert(argv.shift(), argv.shift())
+                when "replay"
+                  ReplayGame.new(argv.shift()).play()
                 when "stats"
                   GameStats.print(argv)
                 else

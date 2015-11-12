@@ -72,6 +72,7 @@ module Mjai
                     self.players[i].attributes.tenhou_tehai_pids = pids
                     tehais_list.push(pids.map(){ |s| pid_to_pai(s) })
                   end
+                  @is_afterfuro = false
                   do_action({
                     :type => :start_kyoku,
                     :bakaze => bakaze,
@@ -86,6 +87,7 @@ module Mjai
                   player_id = ["T", "U", "V", "W"].index($1.upcase)
                   pid = $2
                   self.players[player_id].attributes.tenhou_tehai_pids.push(pid)
+                  @is_afterfuro = false
                   return do_action({
                       :type => :tsumo,
                       :actor => self.players[player_id],
@@ -95,7 +97,9 @@ module Mjai
                   prefix = $1
                   pid = $2
                   player_id = ["D", "E", "F", "G"].index(prefix.upcase)
-                  if pid && pid == self.players[player_id].attributes.tenhou_tehai_pids[-1]
+                  if @is_afterfuro
+                    tsumogiri = false
+                  elsif pid && pid == self.players[player_id].attributes.tenhou_tehai_pids[-1]
                     tsumogiri = true
                   elsif prefix != prefix.upcase
                     tsumogiri = true
@@ -218,6 +222,9 @@ module Mjai
                   consumed_pids = furo.type == :kakan ? [furo.taken_pid] : furo.consumed_pids
                   for pid in consumed_pids
                     delete_tehai_by_pid(actor, pid)
+                  end
+                  if [:pon, :chi].include?(furo.type)
+                    @is_afterfuro = true
                   end
                   return do_action(furo.to_action(self, actor))
                 when "DORA"
@@ -391,6 +398,9 @@ module Mjai
                   @consumed_pids.push(pid)
                 end
               end
+              if @type == :ankan
+                @taken_pid = compose_pid(pai_type, pai_number, 0)
+              end
             end
             
             def parse_kakan()
@@ -443,6 +453,9 @@ module Mjai
         attr_reader(:xml)
         
         def play()
+          if !@raw_action
+            @raw_action = []
+          end
           @doc = Nokogiri.XML(@xml)
           elems = @doc.root.children
           elems.each_with_index() do |elem, j|
@@ -456,6 +469,24 @@ module Mjai
             end
           end
         end
+        
+        
+        def do_action(action)
+          if !action.kind_of?(Action)
+             action = Action.new(action)
+          end
+          @raw_action.push( Action.from_json(action.to_json(), self) )
+          super(action)
+        end
+        
+        def actions
+          if !@raw_action
+            @raw_action = []
+            self.play
+          end
+          return @raw_action
+        end
+        
         
     end
 
