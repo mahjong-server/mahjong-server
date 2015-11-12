@@ -195,7 +195,7 @@ module Mjai
               :actor => action.actor,
               :target => action.target,
               :pai => action.pai,
-              :hora_tehais => action.actor.tehais,
+              :hora_tehais => hora.tehais,
               :uradora_markers => uradora_markers,
               :yakus => hora.yakus,
               :fu => hora.fu,
