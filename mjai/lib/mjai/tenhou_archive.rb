@@ -181,10 +181,12 @@ module Mjai
                   points_params = get_points_params(elem["sc"])
                   tenpais = []
                   tehais = []
+                  kyushu_act = nil
                   for i in 0...4
                     name = "hai%d" % i
                     if elem[name]
                       tenpais.push(true)
+                      kyushu_act = i
                       tehais.push(elem[name].split(/,/).map(){ |pid| pid_to_pai(pid) })
                     else
                       tenpais.push(false)
@@ -202,6 +204,13 @@ module Mjai
                   }
                   reason = reason_map[elem["type"]]
                   raise("unknown reason") if !reason
+                  
+                  ryu_act = {}
+                  if reason == :kyushukyuhai then
+                    ryu_act = {:actor => self.players[kyushu_act]}
+                    tenpais = [false, false, false, false]
+                  end
+                  
                   # TODO add actor for some reasons
                   do_action({
                       :type => :ryukyoku,
@@ -210,7 +219,7 @@ module Mjai
                       :tehais => tehais,
                       :deltas => points_params[:deltas],
                       :scores => points_params[:scores],
-                  })
+                  }.merge(ryu_act))
                   if elem["owari"]
                     do_action({:type => :end_kyoku})
                     do_action({:type => :end_game, :scores => get_points_params(elem["owari"], true)[:scores] })

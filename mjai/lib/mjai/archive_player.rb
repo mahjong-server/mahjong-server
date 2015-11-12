@@ -81,6 +81,12 @@ module Mjai
               return Action.new({:type => :hora, :actor => self, :target => action.actor, :pai => action.pai})
           end
           
+          # 流局のうち、プレイヤからの発声は九種九牌のみ
+          if next_action && next_action.type == :ryukyoku && next_action.reason == :kyushukyuhai &&
+            action.actor.id == @id
+            return Action.new({:type => :ryukyoku, :actor => self, :reason => :kyushukyuhai})
+          end
+          
           if next_action &&
               next_action.actor &&
               next_action.actor.id == @id &&
