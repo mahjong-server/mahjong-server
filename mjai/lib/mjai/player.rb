@@ -168,7 +168,7 @@ module Mjai
           return @game.current_action.type == :tsumo &&
               @game.current_action.actor == self &&
               shanten_analysis.shanten <= 0 &&
-              @furos.empty? &&
+              @furos.all?{|f| f.type == :ankan} &&
               !self.reach? &&
               self.game.num_pipais >= 4 &&
               @score >= 1000
@@ -288,7 +288,7 @@ module Mjai
                 else
                   ok = true
                 end
-                result.push(create_action({:type => :ankan, :consumed => same_pais})) if ok
+                result.push(create_action({:type => :ankan, :pai=> pai, :consumed => same_pais})) if ok
               end
               pon = self.furos.find(){ |f| f.type == :pon && f.taken.same_symbol?(pai) }
               if pon
