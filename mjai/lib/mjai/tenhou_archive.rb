@@ -340,11 +340,13 @@ module Mjai
               params = {
                 :type => @type,
                 :actor => actor,
-                :pai => pid_to_pai(@taken_pid),
                 :consumed => @consumed_pids.map(){ |pid| pid_to_pai(pid) },
               }
               if ![:ankan, :kakan].include?(@type)
                 params[:target] = game.players[(actor.id + @target_dir) % 4]
+              end
+              if @type != :ankan then
+                params[:pai] = pid_to_pai(@taken_pid)
               end
               return Action.new(params)
             end
@@ -406,9 +408,6 @@ module Mjai
                 else
                   @consumed_pids.push(pid)
                 end
-              end
-              if @type == :ankan
-                @taken_pid = compose_pid(pai_type, pai_number, 0)
               end
             end
             

@@ -288,7 +288,7 @@ module Mjai
                 else
                   ok = true
                 end
-                result.push(create_action({:type => :ankan, :pai=> pai, :consumed => same_pais})) if ok
+                result.push(create_action({:type => :ankan, :consumed => same_pais})) if ok
               end
               pon = self.furos.find(){ |f| f.type == :pon && f.taken.same_symbol?(pai) }
               if pon
