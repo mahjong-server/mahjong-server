@@ -40,6 +40,10 @@ module Mjai
                   # BYE: log out
                   return nil
                 when "UN"
+                  if @names != nil
+                    #途中退出等
+                    return nil
+                  end
                   escaped_names = (0...4).map(){ |i| elem["n%d" % i] }
                   return :broken if escaped_names.index(nil)  # Something is wrong.
                   @names = escaped_names.map(){ |s| URI.decode(s) }
@@ -473,6 +477,7 @@ module Mjai
           elems.each_with_index() do |elem, j|
             begin
               if on_tenhou_event(elem, elems[j + 1]) == :broken
+                raise "broken tenhou log"
                 break  # Something is wrong.
               end
             rescue
