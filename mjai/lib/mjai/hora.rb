@@ -330,7 +330,7 @@ module Mjai
                 when :chitoitsu
                   return 25
                 when :kokushimuso
-                  return 20
+                  return 0
                 else
                   fu = 20
                   fu += 10 if self.menzen? && @hora.hora_type == :ron
