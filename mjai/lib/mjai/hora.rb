@@ -512,7 +512,7 @@ module Mjai
             (0...num_same_as_taken).map(){ |i| Candidate.new(self, c, i) }
           end
           @candidates = unflatten_cands.flatten()
-          @best_candidate = @candidates.max_by(){ |c| c.points }
+          @best_candidate = @candidates.max_by(){ |c| [c.points, c.fan, c.fu] }
           
         end
         
