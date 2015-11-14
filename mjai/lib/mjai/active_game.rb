@@ -28,7 +28,7 @@ module Mjai
             raise("Unknown game_type")
           end
           begin
-            do_action({:type => :start_game, :names => self.players.map(){ |pl| pl.name }})
+            do_action({:type => :start_game, :names => self.players.map(){ |pl| pl.name }, :gametype => @game_type})
             @ag_oya = @ag_chicha = @players[0]
             @ag_bakaze = Pai.new("E")
             @ag_honba = 0

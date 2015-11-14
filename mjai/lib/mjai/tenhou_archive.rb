@@ -36,24 +36,32 @@ module Mjai
             def on_tenhou_event(elem, next_elem = nil)
               verify_tenhou_tehais() if @first_kyoku_started
               case elem.name
-                when "SHUFFLE", "GO", "BYE"
+                when "GO"
+                  if elem["type"].to_i & 16 != 0  # Sanma.
+                    #raise(Archive::UnsupportedArchiveError, "Sanma is not supported.")
+                    return :broken
+                  end
+                  if elem["type"].to_i & 8 != 0
+                    @gametype = :tonnan
+                  else
+                    @gametype = :tonpu
+                  end
+                when "SHUFFLE", "BYE"
                   # BYE: log out
                   return nil
                 when "UN"
-                  if @names != nil
-                    #途中退出等
-                    return nil
+                  if !@names  # Somehow there can be multiple UN's.
+                    escaped_names = (0...4).map(){ |i| elem["n%d" % i] }
+                    return :broken if escaped_names.index(nil)  # Something is wrong.
+                    @names = escaped_names.map(){ |s| URI.decode(s) }
                   end
-                  escaped_names = (0...4).map(){ |i| elem["n%d" % i] }
-                  return :broken if escaped_names.index(nil)  # Something is wrong.
-                  @names = escaped_names.map(){ |s| URI.decode(s) }
                   return nil
                 when "TAIKYOKU"
                   oya = elem["oya"].to_i()
                   log_name = elem["log"] || File.basename(self.path, ".mjlog")
                   uri = "http://tenhou.net/0/?log=%s&tw=%d" % [log_name, (4 - oya) % 4]
                   @first_kyoku_started = false
-                  return do_action({:type => :start_game, :uri => uri, :names => @names})
+                  return do_action({:type => :start_game, :uri => uri, :names => @names, :gametype => @gametype})
                 when "INIT"
                   if @first_kyoku_started
                     # Ends the previous kyoku. This is here because there can be multiple AGARIs in

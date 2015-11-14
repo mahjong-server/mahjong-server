@@ -8,6 +8,7 @@ module Mjai
         define_fields([
           [:type, :symbol],
           [:reason, :symbol],
+          [:gametype, :symbol],
           [:actor, :player],
           [:target, :player],
           [:pao, :player],

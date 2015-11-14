@@ -22,19 +22,29 @@ module Mjai
             return
           end
           
-          if action.type == :start_game
-            @id = action.id
-            expected_action = expected_action.merge({:id => @id})
-          elsif action.type == :hora
-            [:uradora_markers, :hora_tehais, :yakus].map{|x|
-              action.public_send(x).sort!
-              expected_action.public_send(x).sort!
-            }
-          elsif action.type == :ryukyoku
-            4.times{|i|
-              action.tehais[i].sort!
-              expected_action.tehais[i].sort!
-            }
+          if (action.type == expected_action.type)
+            if action.type == :start_game
+              @id = action.id
+              expected_action = expected_action.merge({:id => @id})
+            elsif action.type == :hora
+              [:uradora_markers, :hora_tehais, :yakus].map{|x|
+                action.public_send(x).sort!
+                expected_action.public_send(x).sort!
+              }
+              
+              if expected_action.fan >= 100 #役満のときの数値を適当にあわせる
+                expected_action = expected_action.merge({:fan => expected_action.yakus.size * 100})
+                
+                if expected_action.yakus.include?( [:kokushimuso, 100] )
+                  expected_action = expected_action.merge({:fu => 0})
+                end
+              end
+            elsif action.type == :ryukyoku
+              4.times{|i|
+                action.tehais[i].sort!
+                expected_action.tehais[i].sort!
+              }
+            end
           end
           
           if (action.type != expected_action.type) ||

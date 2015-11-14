@@ -49,12 +49,11 @@ module Mjai
                 (14 - arck[:dora].size).times { arck[:dora].unshift("Y?Y") }
             end
             
-            # TODO http://doraaka.exblog.jp/10645111/
-            @game_type = :tonpu
-            
             if @archive.actions[0].type != :start_game
                 raise "first action is not start_game"
             end
+            @game_type = @archive.actions[0].gametype
+            
             4.times { |i| self.players[i].name = @archive.actions[0].names[i] }
             
             begin
