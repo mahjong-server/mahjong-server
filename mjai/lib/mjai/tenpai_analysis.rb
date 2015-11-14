@@ -17,6 +17,12 @@ module Mjai
           return @shanten.shanten == 0
         end
         
+        # 流局時の聴牌判定（5枚目は無効とする）
+        def ryukyoku_tenpai?
+          return self.tenpai? &&
+              self.waited_pais.any?{ |w| @pais.select{ |t| t.remove_red == w }.size < 4 }
+        end
+        
         def waited_pais
           raise(ArgumentError, "invalid number of pais") if @pais.size % 3 != 1
           raise("not tenpai") if !self.tenpai?
