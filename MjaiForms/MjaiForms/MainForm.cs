@@ -18,12 +18,12 @@ namespace MjaiForms
 
     enum State
     {
-        Idle, Dahai, Naki, NakiSelect
+        Idle, Dahai, Naki, NakiSelect, NakiSingleSelect
     }
 
     enum Alternatives
     {
-        Tsumo, Ron, Reach, Pass, Pon, Chi
+        Tsumo, Ron, Reach, Pass, Pon, Chi, Ankan, Kakan, Daiminkan, Kyushu, Chankan
     }
 
     enum Selection
@@ -36,12 +36,19 @@ namespace MjaiForms
         public int target;
         public int pai;
         public List<int> consumed;
+        public int kakan;
 
         public Furo(int target, int pai, List<int> consumed)
         {
             this.target = target;
             this.pai = pai;
             this.consumed = consumed;
+            this.kakan = -1;
+        }
+
+        public bool is_kakan
+        {
+            get { return this.kakan != -1; }
         }
     }
 
@@ -71,7 +78,7 @@ namespace MjaiForms
         const int FUROS_OFFSET_X = 420;
         const int FUROS_OFFSET_Y = MAINBOX_HEIGHT - 10 - PAI_HEIGHT;
 
-        const int DORAS_OFFSET_X = KAWA_OFFSET_X + PAI_WIDTH * 7;
+        const int DORAS_OFFSET_X = KAWA_OFFSET_X + PAI_WIDTH * 6 + PAI_WIDTH / 3;
         const int DORAS_OFFSET_Y = KAWA_OFFSET_Y + PAI_HEIGHT * 3 / 2;
 
         string[] KYOKU_STR = new string[] { "東1", "東2", "東3", "東4", "南1", "南2", "南3", "南4", "西1", "西2", "西3", "西4", "北1", "北2", "北3", "北4" };
@@ -100,8 +107,12 @@ namespace MjaiForms
         List<List<int>> tehais;
         List<List<int>> kawas;
         List<List<int>> kawaNakares;
+        List<List<bool>> kawaTsumogiris;
         List<int> reaches;
         List<List<Furo>> fuross;
+
+        int nakiaskid = -1;
+        int chankan_pai = -1;
 
         List<Alternatives> alternatives;
 
@@ -114,10 +125,10 @@ namespace MjaiForms
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            hostTextBox.Text = "133.242.133.31";
+            hostTextBox.Text = "mjai.hocha.org";
             portTextBox.Text = "11600";
             roomTextBox.Text = "default";
-            nameTextBox.Text = "wistery_k";
+            nameTextBox.Text = "Unk_human";
 
             state = State.Idle;
 
@@ -176,9 +187,25 @@ namespace MjaiForms
 
         int comparePai(int x, int y)
         {
-            if (x % 10 == 0) x += 5;
-            if (y % 10 == 0) y += 5;
+            x *= 10;
+            y *= 10;
+            if (x % 100 == 0) x += 51;
+            if (y % 100 == 0) y += 51;
             return x - y;
+        }
+        bool samePai(int x, int y)
+        {
+            return removeRed(x) == removeRed(y);
+        }
+        int removeRed(int x)
+        {
+            if (x <30 && x % 10 == 0) x += 5;
+            return x;
+        }
+        int makeRed(int x)
+        {
+            if (x < 30 && x % 10 == 5) x -= 5;
+            return x;
         }
 
         void draw()
@@ -212,7 +239,7 @@ namespace MjaiForms
 
                 if (doras != null)
                 {
-                    g.FillRectangle(new SolidBrush(Color.FromArgb(0x96, 0xAF, 0xA3)), new Rectangle(DORAS_OFFSET_X, DORAS_OFFSET_Y - 16, PAI_WIDTH * 4, PAI_HEIGHT + 16));
+                    g.FillRectangle(new SolidBrush(Color.FromArgb(0x96, 0xAF, 0xA3)), new Rectangle(DORAS_OFFSET_X, DORAS_OFFSET_Y - 16, PAI_WIDTH * 5, PAI_HEIGHT + 16));
                     g.DrawString("ドラ表示", font2, Brushes.Black, new Point(DORAS_OFFSET_X, DORAS_OFFSET_Y - 15));
                     for (int i = 0; i < doras.Count; i++)
                     {
@@ -237,7 +264,17 @@ namespace MjaiForms
                     }
 
                     if (names != null)
-                        g.DrawString(names[i], font, Brushes.Black, new Point(185, 258));
+                    {
+                        if (i == (kyoku - 1))
+                        {
+                            g.DrawString(names[i], font, Brushes.Red, new Point(185, 258));
+                        }
+                        else
+                        {
+                            g.DrawString(names[i], font, Brushes.Black, new Point(185, 258));
+                        }
+
+                    }
 
                     if (scores != null)
                         g.DrawString(scores[i].ToString(), font, Brushes.Black, new Point(193, 248));
@@ -248,12 +285,17 @@ namespace MjaiForms
                         {
                             var im = paiga[tehais[i][j]];
                             bool av = (i == id && availablePai != null && availablePai[j]);
-                            var po = new Point(TEHAI_OFFSET_X + j * 21, mainBox.Height - 10 - PAI_HEIGHT + (i == id && j == hovered && av ? -8 : 0));
+                            var po = new Point(TEHAI_OFFSET_X + j * PAI_WIDTH, mainBox.Height - 10 - PAI_HEIGHT + (i == id && j == hovered && av ? -8 : 0));
                             g.DrawImage(im, po);
                             if (i == id && !av) 
                                 g.FillRectangle(new SolidBrush(Color.FromArgb(0x80, Color.Black)), new Rectangle(po, new Size(PAI_WIDTH, PAI_HEIGHT)));
                             if (i == id && selecteds != null && selecteds.Any(_ => _ == j))
                                 g.FillRectangle(new SolidBrush(Color.FromArgb(0x80, Color.OrangeRed)), new Rectangle(po, new Size(PAI_WIDTH, PAI_HEIGHT)));
+                        }
+
+                        if (i == id && state == State.Dahai)
+                        {
+                            g.FillRectangle(new SolidBrush(Color.Red), new Rectangle(TEHAI_OFFSET_X + (tehais[i].Count - 1) * PAI_WIDTH, mainBox.Height - 10, PAI_WIDTH, 3));
                         }
                     }
 
@@ -280,8 +322,14 @@ namespace MjaiForms
 
                             g.DrawImage(im, po);
 
+                            if (kawaTsumogiris!=null && kawaTsumogiris[i][j])
+                                g.FillRectangle(new SolidBrush(Color.FromArgb(0x60, Color.Azure)), rect);
+
                             if (kawaNakares != null && kawaNakares[i].Any(_ => _ == j))
                                 g.FillRectangle(new SolidBrush(Color.FromArgb(0x80, Color.Black)), rect);
+
+                            if (i == nakiaskid && j == kawas[i].Count-1)
+                                g.FillRectangle(new SolidBrush(Color.FromArgb(0x80, Color.Yellow)), rect);
 
                         }
                     }
@@ -292,18 +340,46 @@ namespace MjaiForms
                         for (int j = 0; j < fuross[i].Count; j++)
                         {
                             Furo f = fuross[i][j];
-                            int relatedPos = (f.target - i + 4) % 4;
-                            for (int k = 1; k <= 3; k++)
+                            
+                            if (f.target == -1) //ankan
                             {
-                                if (k == relatedPos)
-                                {
-                                    x -= PAI2_WIDTH;
-                                    g.DrawImage(paiga2[f.pai], new Point(x, FUROS_OFFSET_Y + 8));
-                                }
-                                else
+                                for (int k = 1; k <= 3; k++)
                                 {
                                     x -= PAI_WIDTH;
-                                    g.DrawImage(paiga[f.consumed[k - 1 - (k > relatedPos ? 1 : 0)]], new Point(x, FUROS_OFFSET_Y));
+                                    g.DrawImage(paiga[k == 2 ? makeRed(f.consumed[0]) : 30], new Point(x, FUROS_OFFSET_Y));
+                                }
+                            }
+                            else
+                            {
+                                int relatedPos = (f.target - i + 4) % 4;
+                                for (int k = 1; k <= 3; k++)
+                                {
+                                    if (k == relatedPos)
+                                    {
+                                        x -= PAI2_WIDTH;
+                                        g.DrawImage(paiga2[f.pai], new Point(x, FUROS_OFFSET_Y + 8));
+
+                                        if (f.is_kakan)
+                                        {
+                                            var po = new Point(x, FUROS_OFFSET_Y + 8 - PAI2_HEIGHT);
+                                            g.DrawImage(paiga2[f.kakan], po);
+                                            if (chankan_pai == f.kakan)
+                                            {
+                                                var rect = new Rectangle(po, new Size(PAI2_WIDTH, PAI2_HEIGHT));
+                                                g.FillRectangle(new SolidBrush(Color.FromArgb(0x80, Color.Yellow)), rect);
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        x -= PAI_WIDTH;
+                                        g.DrawImage(paiga[f.consumed[k - 1 - (k > relatedPos ? 1 : 0)]], new Point(x, FUROS_OFFSET_Y));
+                                    }
+                                }
+
+                                if (f.consumed.Count == 3)
+                                {
+                                    g.DrawString("大明槓", font2, Brushes.Black, new Point(x, FUROS_OFFSET_Y));
                                 }
                             }
                         }
@@ -356,7 +432,7 @@ namespace MjaiForms
                     if (line == null) continue;
                     println(string.Format("<-\t{0}", line));
                     var json = DynamicJson.Parse(line);
-                    
+                  
                     object response = null;
 
                     int pai;
@@ -380,7 +456,12 @@ namespace MjaiForms
                             kyoku = (int)json.kyoku;
                             honba = (int)json.honba;
                             kyotaku = (int)json.kyotaku;
+                            nakiaskid = -1;
+                            chankan_pai = -1;
                             tehais = (((string[][])json.tehais).Select<string[], List<int>>(tehai => (tehai.Select<string, int>(parsePai)).ToList<int>())).ToList<List<int>>();
+                            for (int i = 0; i < 4; i++) tehais[i].Sort(new Comparison<int>(comparePai));
+                            kawaTsumogiris = new List<List<bool>>();
+                            for (int i = 0; i < 4; i++) kawaTsumogiris.Add(new List<bool>());
                             kawas = new List<List<int>>();
                             for(int i = 0; i < 4; i++) kawas.Add(new List<int>());
                             reaches = new List<int>();
@@ -393,9 +474,15 @@ namespace MjaiForms
                             doras.Add(parsePai((string)json.dora_marker));
                             response = Protocol.none();
                             break;
+                        case "dora":
+                            doras.Add(parsePai((string)json.dora_marker));
+                            response = Protocol.none();
+                            break;
                         case "tsumo":
                             if ((int)json.actor == id)
                             {
+                                tehais[id].Sort(new Comparison<int>(comparePai));
+
                                 pai = parsePai((string)json.pai);
                                 tehais[id].Add(pai);
                                 int shanten = Algorithm.shanten(tehais[id]);
@@ -403,7 +490,44 @@ namespace MjaiForms
 
                                 alternatives = new List<Alternatives>();
                                 if (shanten == -1) alternatives.Add(Alternatives.Tsumo);
-                                if (fuross[id].Count == 0 && shanten <= 0 && reaches[id] == -1) alternatives.Add(Alternatives.Reach);
+                                if (fuross[id].Where(_ => _.target != -1).Count() == 0 && shanten <= 0 && reaches[id] == -1) alternatives.Add(Alternatives.Reach);
+
+                                if (json.IsDefined("possible_actions"))
+                                {
+                                    foreach (var vac in json.possible_actions)
+                                    {
+                                        if (vac.IsDefined("type") && vac.IsDefined("reason"))
+                                        {
+                                            if ((string)vac.type == "ryukyoku" && (string)vac.reason == "kyushukyuhai")
+                                            {
+                                                alternatives.Add(Alternatives.Kyushu);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                var kanzai = tehais[id].GroupBy(_ => removeRed(_)).Select(_ => new { pai = _.Key, cnt = _.Count() }).Where(_ => _.cnt == 4).Select(_ => _.pai);
+                                if (kanzai.Count() > 0)
+                                {
+                                    alternatives.Add(Alternatives.Ankan);
+                                }
+
+                                var kakanzai = new List<int>();
+                                foreach (var fr in fuross[id])
+                                {
+                                    if (fr.is_kakan == false && fr.target != -1 && samePai(fr.consumed[0], fr.consumed[1]))
+                                    {
+                                        if (tehais[id].Any(_ => samePai(_, fr.consumed[0])))
+                                        {
+                                            kakanzai.Add(fr.consumed[0]);
+                                        }
+                                    }
+                                }
+                                if (kakanzai.Count > 0)
+                                {
+                                    alternatives.Add(Alternatives.Kakan);
+                                }
+
 
                                 if (reaches[id] != -1)
                                 {
@@ -415,14 +539,15 @@ namespace MjaiForms
                                     availablePai = Enumerable.Repeat(true, 14).ToList();
                                 }
 
-                                if (alternatives.Any(_ => _ == Alternatives.Tsumo) && autoHora.Checked)
+                                if (shanten == -1 && autoHora.Checked)
                                 {
                                     response = Protocol.hora(id, id, pai);
                                 }
-                                else if (reaches[id] != -1)
+                                else if (reaches[id] != -1 && alternatives.Count == 0)
                                 {
                                     response = Protocol.dahai(id, pai, true);
                                     tehais[id].RemoveAt(tehais[id].Count - 1);
+                                    kawaTsumogiris[id].Add(true);
                                     kawas[id].Add(pai);
                                 }
                                 else
@@ -443,9 +568,11 @@ namespace MjaiForms
                                     if (selection == Selection.PaiClick)
                                     {
                                         var sute = tehais[id][selected];
-                                        response = Protocol.dahai(id, sute, selected == tehais[id].Count - 1);
+                                        bool tsumogiri = selected == tehais[id].Count - 1;
+                                        response = Protocol.dahai(id, sute, tsumogiri);
                                         tehais[id].Remove(sute);
                                         tehais[id].Sort(new Comparison<int>(comparePai));
+                                        kawaTsumogiris[id].Add(tsumogiri);
                                         kawas[id].Add(sute);
                                     }
                                     else if (selection == Selection.ButtonClick)
@@ -458,6 +585,91 @@ namespace MjaiForms
                                         else if (alt == Alternatives.Reach)
                                         {
                                             response = Protocol.reach(id);
+                                        }
+                                        else if(alt == Alternatives.Kyushu)
+                                        {
+                                            response = Protocol.kyushukyuhai(id);
+                                        }
+                                        else if (alt == Alternatives.Ankan)
+                                        {
+                                            alternatives.Clear();
+
+                                            availablePai = Enumerable.Repeat(false, 14).ToList();
+                                            foreach (var ka in kanzai)
+                                            {
+                                                int ind = tehais[id].FindIndex(p => samePai(p, ka));
+                                                availablePai[ind] = true;
+                                            }
+
+                                            state = State.NakiSingleSelect;
+                                            selection = Selection.Yet;
+                                            selected = -1;
+
+                                            BeginInvoke(new MethodInvoker(draw));
+
+                                            while (true)
+                                            {
+                                                if (selection != Selection.Yet) break;
+                                                Thread.Sleep(1);
+                                            }
+                                            state = State.Idle;
+
+                                            int do_kan = tehais[id][selected];
+                                            List<int> consumed = new List<int>();
+                                            for (int i = 0; i < 4; i++)
+                                            {
+                                                int ix = tehais[id].FindIndex(p => samePai(p, do_kan));
+                                                consumed.Add(tehais[id][ix]);
+                                                tehais[id].RemoveAt(ix);
+                                            }
+                                            response = Protocol.ankan(id, consumed);
+
+                                            availablePai = Enumerable.Repeat(reaches[id] == -1, 14).ToList();
+                                        }
+                                        else if (alt == Alternatives.Kakan)
+                                        {
+                                            alternatives.Clear();
+
+                                            availablePai = Enumerable.Repeat(false, 14).ToList();
+                                            foreach (var ka in kakanzai)
+                                            {
+                                                int ind = tehais[id].FindIndex(p => samePai(p, ka));
+                                                availablePai[ind] = true;
+                                            }
+
+                                            state = State.NakiSingleSelect;
+                                            selection = Selection.Yet;
+                                            selected = -1;
+
+                                            BeginInvoke(new MethodInvoker(draw));
+
+                                            while (true)
+                                            {
+                                                if (selection != Selection.Yet) break;
+                                                Thread.Sleep(1);
+                                            }
+                                            state = State.Idle;
+
+                                            int do_kan = tehais[id][selected];
+                                            List<int> consumed = new List<int>();
+                                            foreach (var fr in fuross[id])
+                                            {
+                                                if (fr.is_kakan == false && fr.target != -1 && samePai(fr.consumed[0], fr.consumed[1]))
+                                                {
+                                                    if (samePai(do_kan, fr.consumed[0]))
+                                                    {
+                                                        consumed.Add(fr.consumed[0]);
+                                                        consumed.Add(fr.consumed[1]);
+                                                        consumed.Add(fr.pai);
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            tehais[id].RemoveAt(selected);
+                                            response = Protocol.kakan(id, do_kan, consumed);
+
+                                            availablePai = Enumerable.Repeat(true, 14).ToList();
+
                                         }
                                     }
 
@@ -474,6 +686,7 @@ namespace MjaiForms
                             break;
                         case "reach":
                             actor = (int)json.actor;
+                            reaches[actor] = kawas[actor].Count;
 
                             if (actor != id)
                             {
@@ -499,10 +712,12 @@ namespace MjaiForms
                                 state = State.Idle;
 
                                 var sute = tehais[id][selected];
-                                response = Protocol.dahai(id, sute, selected == tehais[id].Count - 1);
+                                bool tsumogiri = selected == tehais[id].Count - 1;
+                                response = Protocol.dahai(id, sute, tsumogiri);
 
                                 tehais[id].Remove(sute);
                                 tehais[id].Sort(new Comparison<int>(comparePai));
+                                kawaTsumogiris[id].Add(tsumogiri);
                                 kawas[id].Add(sute);
                             }
 
@@ -511,7 +726,6 @@ namespace MjaiForms
                             break;
                         case "reach_accepted":
                             actor = (int)json.actor;
-                            reaches[actor] = kawas[actor].Count - 1;
                             scores = (List<int>)json.scores;
                             response = Protocol.none();
                             break;
@@ -521,6 +735,7 @@ namespace MjaiForms
 
                             if (actor != id)
                             {
+                                kawaTsumogiris[actor].Add((bool)json.tsumogiri);
                                 if ((bool)json.tsumogiri)
                                 {
                                     tehais[actor].RemoveAt(tehais[actor].Count - 1);
@@ -532,7 +747,7 @@ namespace MjaiForms
                                     tehais[actor].RemoveAt(index);
                                     kawas[actor].Add(pai);
                                 }
-
+                                
                                 alternatives = new List<Alternatives>() { Alternatives.Pass };
 
                                 if (Algorithm.shanten(tehais[id].Concat(new[] { pai })) == -1)
@@ -550,7 +765,7 @@ namespace MjaiForms
                                 }
                                 if (reaches[id] == -1 && Algorithm.canKan(tehais[id], pai))
                                 {
-                                    alternatives.Add(Alternatives.Kan);
+                                    alternatives.Add(Alternatives.Daiminkan);
                                 }
                                 
                                 if (alternatives.Any(_ => _ == Alternatives.Ron && autoHora.Checked))
@@ -567,6 +782,7 @@ namespace MjaiForms
                                     selected = -1;
                                     state = State.Naki;
                                     availablePai = Enumerable.Repeat(false, 14).ToList();
+                                    nakiaskid = actor;
 
                                     BeginInvoke(new MethodInvoker(draw));
 
@@ -586,47 +802,98 @@ namespace MjaiForms
                                     else if (alt == Alternatives.Pon)
                                     {
                                         List<int> consumed = new List<int>();
-                                        for (int i = 0; i < 2; i++)
+
+                                        if (pai < 30 && pai % 10 == 5 && tehais[id].Count(_ => samePai(_, pai)) == 3)
                                         {
-                                            int ix = tehais[id].FindIndex(p => comparePai(p, pai) == 0);
-                                            consumed.Add(tehais[id][ix]);
-                                            tehais[id].RemoveAt(ix);
+
+                                            // 赤牌を含むか
+                                            alternatives.Clear();
+
+                                            availablePai = Enumerable.Repeat(false, 14).ToList();
+                                            availablePai[tehais[id].IndexOf(pai)] = true;
+                                            availablePai[tehais[id].IndexOf(pai - 5)] = true;
+
+                                            state = State.NakiSingleSelect;
+                                            selection = Selection.Yet;
+                                            selected = -1;
+
+                                            BeginInvoke(new MethodInvoker(draw));
+
+                                            while (true)
+                                            {
+                                                if (selection != Selection.Yet) break;
+                                                Thread.Sleep(1);
+                                            }
+                                            state = State.Idle;
+
+                                            consumed.Add(tehais[id][selected]);
+                                            tehais[id].Remove(tehais[id][selected]);
+                                            consumed.Add(pai);
+                                            tehais[id].Remove(pai);
+
+                                            availablePai = Enumerable.Repeat(true, 14).ToList();
+                                        }
+                                        else
+                                        {
+                                            for (int i = 0; i < 2; i++)
+                                            {
+                                                int ix = tehais[id].FindIndex(p => samePai(p, pai));
+                                                consumed.Add(tehais[id][ix]);
+                                                tehais[id].RemoveAt(ix);
+                                            }
                                         }
                                         response = Protocol.pon(id, actor, pai, consumed);
                                     }
-                                    else if (alt == Alternatives.Kan)
+                                    else if (alt == Alternatives.Daiminkan)
                                     {
-                                        response = Protocol.pon(id, actor, pai, Enumerable.Repeat(pai, 3).ToList());
-                                        for (int i = 0; i < 3; i++) tehais[id].Remove(pai);
+                                        var consumed = new List<int>();
+                                        for (int i = 0; i < 3; i++)
+                                        {
+                                            int ix = tehais[id].FindIndex(p => samePai(p, pai));
+                                            consumed.Add(tehais[id][ix]);
+                                            tehais[id].RemoveAt(ix);
+                                        }
+                                        response = Protocol.daiminkan(id, actor, pai, consumed);
                                     }
                                     else if (alt == Alternatives.Chi)
                                     {
                                         alternatives = new List<Alternatives>();
-                                        selection = Selection.Yet;
                                         selecteds = new List<int>();
-                                        state = State.NakiSelect;
-                                        availablePai = Enumerable.Repeat(true, 14).ToList();
-
-                                        BeginInvoke(new MethodInvoker(draw));
+                                        availablePai = Algorithm.chiAvailable(tehais[id], pai).ToList();
 
                                         while (true)
                                         {
-                                            if (selection != Selection.Yet) break;
-                                            Thread.Sleep(1);
+                                            selecteds = new List<int>();
+                                            selection = Selection.Yet;
+                                            state = State.NakiSelect;
+                                            BeginInvoke(new MethodInvoker(draw));
+
+                                            while (true)
+                                            {
+                                                if (selection != Selection.Yet) break;
+                                                Thread.Sleep(1);
+                                            }
+
+                                            state = State.Idle;
+
+                                            selecteds.Sort();
+                                            selecteds.Reverse();
+
+                                            List<int> selhai = selecteds.Select(_ => tehais[id][_]).ToList();
+                                            selhai.Add(pai);
+                                            if (Algorithm.isShuntsu(selhai)) { break; }
                                         }
-
-                                        state = State.Idle;
-
-                                        selecteds.Sort();
-                                        selecteds.Reverse();
 
                                         response = Protocol.chi(id, actor, pai, selecteds.Select(_ => tehais[id][_]).ToList());
 
                                         for (int i = 0; i < selecteds.Count; i++)
                                             tehais[id].RemoveAt(selecteds[i]);
 
+                                        availablePai = Enumerable.Repeat(true, 14).ToList();
                                         selecteds = new List<int>();
                                     }
+
+                                    nakiaskid = -1;
 
                                 }
                                 
@@ -637,20 +904,59 @@ namespace MjaiForms
                             }
                             break;
                         case "pon":
-                            response = onNaki(json);
-                            break;
                         case "chi":
                             response = onNaki(json);
                             break;
-                        case "kan":
-                            response = onNaki(json);
+                        case "ankan":
+                        case "kakan":
+                        case "daiminkan":
+                            response = onKan(json);
                             break;
                         case "hora":
-                            scores = (List<int>)json.scores;
-                            response = Protocol.none();
-                            break;
                         case "ryukyoku":
+                            string caption;
+                            if ((string)json.type == "hora")
+                            {
+                                int target = (int)json.target;
+                                int ac = (int)json.actor;
+                                
+                                tehais[ac] = ((string[])json.hora_tehais).Select<string, int>(parsePai).ToList<int>();
+                                if (target != ac)
+                                {
+                                    nakiaskid = target;
+                                }
+                                else
+                                {
+                                    tehais[ac].Add(parsePai((string)json.pai));
+                                }
+
+                                availablePai = Enumerable.Repeat(ac == id, 14).ToList();
+
+                                caption = "和了 " + names[(int)json.actor];
+                            }
+                            else
+                            {
+                                var t_tehais = (((string[][])json.tehais).Select<string[], List<int>>(tehai => (tehai.Select<string, int>(parsePai)).ToList<int>())).ToList<List<int>>();
+                                availablePai = Enumerable.Repeat(t_tehais[id][0] != parsePai("?"), 14).ToList();
+                                
+                                t_tehais[id] = tehais[id];
+                                tehais = t_tehais;
+                                caption = "流局 " + (string)json.reason;
+                            }
+
                             scores = (List<int>)json.scores;
+                            var delta = (List<int>)json.deltas;
+
+                            string scorestr = "";
+                            for (int i = 0; i < 4; i++)
+                            {
+                                int player = (i - id + 4) % 4;
+                                int d = delta[player];
+                                scorestr += names[player] + ": " + ((d > 0) ? "+" : "") + d + " (" + scores[player] + ")\n";
+                            }
+                            BeginInvoke(new MethodInvoker(draw));
+                            MessageBox.Show(scorestr + "\n" + line, caption);
+                            
                             response = Protocol.none();
                             break;
                         case "error":
@@ -674,13 +980,96 @@ namespace MjaiForms
             enableConnectButton();
         }
 
+        object onKan(dynamic json)
+        {
+            int actor = (int)json.actor;
+
+            var consumed = (List<string>)json.consumed;
+
+            if ((string)json.type == "daiminkan")
+            {
+                int target = (int)json.target;
+                fuross[actor].Add(new Furo(target, parsePai((string)json.pai), consumed.Select(parsePai).ToList()));
+            }
+            else if ((string)json.type == "ankan")
+            {
+                fuross[actor].Add(new Furo(-1, -1, consumed.Select(parsePai).ToList()));
+            }
+            else if ((string)json.type == "kakan")
+            {
+                for (int i = 0; i < fuross[actor].Count; i++)
+                {
+                    if (fuross[actor][i].is_kakan == false && fuross[actor][i].target != -1 &&
+                        samePai(fuross[actor][i].consumed[0], fuross[actor][i].consumed[1]) && samePai(fuross[actor][i].consumed[0], parsePai((string)json.pai)))
+                    {
+                        var kak = fuross[actor][i];
+                        kak.kakan = (parsePai((string)json.pai));
+                        fuross[actor][i] = kak;
+                        break;
+                    }
+                }
+            }
+
+            if (actor != id)
+            {
+                if ((string)json.type == "kakan")
+                {
+                    int pai = parsePai((string)json.pai);
+
+                    //chankan
+                    if (Algorithm.shanten(tehais[id].Concat(new[] { pai })) == -1)
+                    {
+                        alternatives = new List<Alternatives>() { Alternatives.Pass, Alternatives.Chankan };
+
+                        selection = Selection.Yet;
+                        selected = -1;
+                        state = State.Naki;
+                        availablePai = Enumerable.Repeat(false, 14).ToList();
+                        chankan_pai = pai;
+
+                        BeginInvoke(new MethodInvoker(draw));
+
+                        while (true)
+                        {
+                            if (selection != Selection.Yet) break;
+                            Thread.Sleep(1);
+                        }
+
+                        chankan_pai = -1;
+                        state = State.Idle;
+
+                        Alternatives alt = alternatives[selected];
+                        if (alt == Alternatives.Chankan)
+                        {
+                            return Protocol.hora(id, actor, pai);
+                        }
+
+                        availablePai = Enumerable.Repeat(reaches[id] == -1, 14).ToList();
+                    }
+
+                    tehais[actor].RemoveAt(0);
+                }
+                else
+                {
+                    for (int i = 0; i < consumed.Count; i++)
+                        tehais[actor].RemoveAt(0);
+                }
+            }
+
+            availablePai = Enumerable.Repeat(reaches[id] == -1, 14).ToList();
+
+            object response = new { type = "none" };
+            return response;
+        }
+
         object onNaki(dynamic json)
         {
             int actor = (int)json.actor;
-            int target = (int)json.target;
+            var consumed = (List<string>)json.consumed;
 
-            fuross[actor].Add(new Furo(target, parsePai((string)json.pai), ((List<string>)json.consumed).Select(parsePai).ToList()));
+            int target = (int)json.target;
             kawaNakares[target].Add(kawas[target].Count - 1);
+            fuross[actor].Add(new Furo(target, parsePai((string)json.pai), consumed.Select(parsePai).ToList()));
 
             object response = null;
             if (actor == id)
@@ -705,14 +1094,18 @@ namespace MjaiForms
                 response = Protocol.dahai(id, sute, false);
                 tehais[id].Remove(sute);
                 tehais[id].Sort(new Comparison<int>(comparePai));
+                kawaTsumogiris[id].Add(false);
                 kawas[id].Add(sute);
             }
             else
             {
-                for (int i = 0; i < ((List<string>)json.consumed).Count; i++)
+                for (int i = 0; i < consumed.Count; i++)
+                {
                     tehais[actor].RemoveAt(0);
+                }
                 response = new { type = "none" };
             }
+
             availablePai = Enumerable.Repeat(reaches[id] == -1, 14).ToList();
             return response;
         }
@@ -739,15 +1132,28 @@ namespace MjaiForms
             connectButton.Enabled = true;
         }
 
-        private void mainBox_Click(object sender, EventArgs e)
+        private void mainBox_MouseClick(object sender, MouseEventArgs e)
         {
 
             Point p = mainBox.PointToClient(Cursor.Position);
 
-            if (state == State.Dahai || state == State.Naki)
+            if (state == State.Dahai || state == State.Naki || state == State.NakiSingleSelect)
             {
 
-                if (p.Y >= TEHAI_OFFSET_Y && p.Y <= TEHAI_OFFSET_Y + PAI_HEIGHT)
+                if (e.Button == MouseButtons.Right)
+                {
+                    if (state == State.Dahai && availablePai[tehais[id].Count - 1])
+                    {
+                        selection = Selection.PaiClick;
+                        selected = tehais[id].Count - 1;
+                    }
+                    else
+                    {
+                        selection = Selection.ButtonClick;
+                        selected = 0;
+                    }
+                }
+                else if (p.Y >= TEHAI_OFFSET_Y && p.Y <= TEHAI_OFFSET_Y + PAI_HEIGHT)
                 {
 
                     int sel = div(p.X - TEHAI_OFFSET_X, PAI_WIDTH);
@@ -766,6 +1172,7 @@ namespace MjaiForms
                         selected = sel;
                     }
                 }
+                
             }
             else if (state == State.NakiSelect)
             {
@@ -796,6 +1203,11 @@ namespace MjaiForms
             else
                 hovered = -1;
             draw();
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Environment.Exit(-1);
         }
     }
 }

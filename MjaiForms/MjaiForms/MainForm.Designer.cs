@@ -41,6 +41,7 @@
             this.connectButton = new System.Windows.Forms.Button();
             this.autoHora = new System.Windows.Forms.CheckBox();
             this.nakiNashi = new System.Windows.Forms.CheckBox();
+            this.label5 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.mainBox)).BeginInit();
             this.SuspendLayout();
             // 
@@ -131,7 +132,7 @@
             this.mainBox.Size = new System.Drawing.Size(430, 430);
             this.mainBox.TabIndex = 9;
             this.mainBox.TabStop = false;
-            this.mainBox.Click += new System.EventHandler(this.mainBox_Click);
+            this.mainBox.MouseClick += new System.Windows.Forms.MouseEventHandler(this.mainBox_MouseClick);
             this.mainBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.mainBox_MouseMove);
             // 
             // connectButton
@@ -147,30 +148,38 @@
             // autoHora
             // 
             this.autoHora.AutoSize = true;
-            this.autoHora.Checked = true;
-            this.autoHora.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.autoHora.Location = new System.Drawing.Point(861, 446);
+            this.autoHora.Location = new System.Drawing.Point(765, 446);
             this.autoHora.Name = "autoHora";
-            this.autoHora.Size = new System.Drawing.Size(72, 16);
+            this.autoHora.Size = new System.Drawing.Size(172, 16);
             this.autoHora.TabIndex = 11;
-            this.autoHora.Text = "自動和了";
+            this.autoHora.Text = "自動和了（役なしフリテン注意）";
             this.autoHora.UseVisualStyleBackColor = true;
             // 
             // nakiNashi
             // 
             this.nakiNashi.AutoSize = true;
-            this.nakiNashi.Location = new System.Drawing.Point(789, 446);
+            this.nakiNashi.Location = new System.Drawing.Point(693, 446);
             this.nakiNashi.Name = "nakiNashi";
             this.nakiNashi.Size = new System.Drawing.Size(66, 16);
             this.nakiNashi.TabIndex = 12;
             this.nakiNashi.Text = "鳴き無し";
             this.nakiNashi.UseVisualStyleBackColor = true;
             // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(504, 447);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(122, 12);
+            this.label5.TabIndex = 13;
+            this.label5.Text = "右クリック：ツモ切り／パス";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(945, 471);
+            this.Controls.Add(this.label5);
             this.Controls.Add(this.nakiNashi);
             this.Controls.Add(this.autoHora);
             this.Controls.Add(this.connectButton);
@@ -186,6 +195,7 @@
             this.Controls.Add(this.debugTextBox);
             this.Name = "MainForm";
             this.Text = "Form1";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.mainBox)).EndInit();
             this.ResumeLayout(false);
@@ -208,6 +218,7 @@
         private System.Windows.Forms.Button connectButton;
         private System.Windows.Forms.CheckBox autoHora;
         private System.Windows.Forms.CheckBox nakiNashi;
+        private System.Windows.Forms.Label label5;
     }
 }
 

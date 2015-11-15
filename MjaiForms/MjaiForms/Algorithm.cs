@@ -140,6 +140,51 @@ namespace MjaiForms
             return false;
         }
 
+        public static IEnumerable<bool> chiAvailable(IEnumerable<int> tehai, int pai)
+        {
+            if (!canChi(tehai, pai)) { throw new Exception("Can't chi."); }
+            List<bool> ret = Enumerable.Repeat(false, tehai.Count()).ToList();
+
+            if (pai % 10 == 0) pai += 5;
+
+            tehai = tehai.Select(_ => (_ % 10 == 0) ? _ + 5 : _);
+
+            int num = pai % 10;
+
+            List<int> ok = new List<int>();
+            if (num >= 3 && tehai.Any(_ => _ == pai - 2) && tehai.Any(_ => _ == pai - 1))
+            {
+                ok.Add(pai - 2);
+                ok.Add(pai - 1);
+            }
+            if (num >= 2 && num <= 8 && tehai.Any(_ => _ == pai - 1) && tehai.Any(_ => _ == pai + 1))
+            {
+                ok.Add(pai - 1);
+                ok.Add(pai + 1);
+            }
+            if (num <= 7 && tehai.Any(_ => _ == pai + 1) && tehai.Any(_ => _ == pai + 2))
+            {
+                ok.Add(pai + 1);
+                ok.Add(pai + 2);
+            }
+
+            return tehai.Select(_ => (ok.Contains(_)));
+        }
+
+        public static bool isShuntsu(IEnumerable<int> hai)
+        {
+            var hailist = hai.Select(_ => (_ % 10 == 0) ? _ + 5 : _).ToList();
+            hailist.Sort();
+
+            if (hailist.Count != 3) { return false; }
+            if ((hailist[0] / 10 == hailist[1] / 10) && (hailist[1] / 10 == hailist[2] / 10))
+            {
+                return hailist[0] + 1 == hailist[1] && hailist[1] + 1 == hailist[2];
+            }
+
+            return false;
+        }
+
         public static bool canPon(IEnumerable<int> tehai, int pai)
         {
             if (pai % 10 == 0) pai += 5;

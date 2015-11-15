@@ -37,9 +37,17 @@ namespace MjaiForms
             return naki("pon", actor, target, pai, consumed);
         }
 
-        public static object kan(int actor, int target, int pai, List<int> consumed)
+        public static object daiminkan(int actor, int target, int pai, List<int> consumed)
         {
-            return naki("kan", actor, target, pai, consumed);
+            return naki("daiminkan", actor, target, pai, consumed);
+        }
+        public static object ankan(int actor, List<int> consumed)
+        {
+            return new { type = "ankan", actor = actor, consumed = consumed.Select(Pai.dump).ToList() };
+        }
+        public static object kakan(int actor, int pai, List<int> consumed)
+        {
+            return new { type = "kakan", actor = actor, pai = Pai.dump(pai), consumed = consumed.Select(Pai.dump).ToList() };
         }
 
         public static object chi(int actor, int target, int pai, List<int> consumed)
@@ -52,5 +60,11 @@ namespace MjaiForms
             consumed.Sort();
             return new { type = type, actor = actor, target = target, pai = Pai.dump(pai), consumed = consumed.Select(Pai.dump).ToList() };
         }
+
+        public static object kyushukyuhai(int actor)
+        {
+            return new { type = "ryukyoku", reason = "kyushukyuhai", actor = actor };
+        }
+        
     }
 }
