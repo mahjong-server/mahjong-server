@@ -189,9 +189,11 @@ module Mjai
             raise("no yaku") if !hora.valid?
             deltas = [0, 0, 0, 0]
             deltas[action.actor.id] += hora.points + tsumibo * 300 + @ag_kyotaku * 1000
+            
+            pao_id = action.actor.pao_for_id
             if hora.hora_type == :tsumo
-              if action.actor.pao_for_id != nil
-                deltas[action.actor.pao_for_id] -= (hora.points + tsumibo * 300)
+              if pao_id != nil
+                deltas[pao_id] -= (hora.points + tsumibo * 300)
               else
                 for player in self.players
                   next if player == action.actor
@@ -200,8 +202,11 @@ module Mjai
                 end
               end
             else
-              if action.actor.pao_for_id != nil
-                deltas[action.actor.pao_for_id] -= (hora.points/2 + tsumibo * 300)
+              if pao_id == action.target.id
+                pao_id = nil
+              end
+              if pao_id != nil
+                deltas[pao_id] -= (hora.points/2 + tsumibo * 300)
                 deltas[action.target.id] -= (hora.points/2)
               else
                 deltas[action.target.id] -= (hora.points + tsumibo * 300)
@@ -220,7 +225,7 @@ module Mjai
               :hora_points => hora.points,
               :deltas => deltas,
               :scores => get_scores(deltas),
-            }.merge( action.actor.pao_for_id!=nil ? {:pao=> self.players[action.actor.pao_for_id]} : {} ) )
+            }.merge( pao_id!=nil ? {:pao=> self.players[pao_id]} : {} ) )
             # Only kamicha takes them in case of daburon.
             tsumibo = 0
             @ag_kyotaku = 0
