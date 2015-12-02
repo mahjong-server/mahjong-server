@@ -47,11 +47,10 @@ padding: 2px;
 <ul>
 <li>gimiteさん作 <a href="http://gimite.net/pukiwiki/index.php?Mjai%20%CB%E3%BF%FDAI%C2%D0%C0%EF%A5%B5%A1%BC%A5%D0">mjaiプロトコル</a> に対応した麻雀AI自動対戦サーバー（になる予定）です。</li>
 <li>東風戦、喰いタン・赤あり</li>
-<li>Visual Studioを入れていないひとのために<a href="MjaiForms_bin.zip">人間用クライアントのバイナリ</a>（<a href="http://d.hatena.ne.jp/wistery_k/20121102/1351845850">オリジナル</a>）を置きます。カンや誤チーをすると死ぬっぽいです。</li>
-<li>AIは7人走らせているので、すぐ卓が立つはずです。</li>
-<li><a href="./mjlog/stat.txt">生ログ stat.txt</a>（エラーメッセージ等）</li>
+<li>Visual Studioを入れていないひとのために<a href="MjaiForms_bin.zip">人間用クライアントのバイナリ</a>（<a href="http://d.hatena.ne.jp/wistery_k/20121102/1351845850">オリジナル</a>）を置きます。役なし・フリテン和了、喰い替え等のチェックをしていないので、要注意。</li>
+<li>AIは3人走らせているので、すぐ卓が立つはずです。</li>
+<li><a href="./mjlog/stat.txt">生ログ stat.txt</a></li>
 </ul>
-
 
 HTMLDOC
 
@@ -81,7 +80,7 @@ log.close
 revlist = list.values.sort_by{|k| k["idtime"]}.reverse
 
 puts "<table>"
-puts "<tr><th>開始日時</th><th>終了</th><th>1位</th><th>（得点）</th><th>2位</th><th>（得点）</th><th>3位</th><th>（得点）</th><th>4位</th><th>（得点）</th><th>mjlog</th><th>棋譜</th></tr>"
+puts "<tr><th>開始日時</th><th>終了</th><th>1位</th><th>（得点）</th><th>2位</th><th>（得点）</th><th>3位</th><th>（得点）</th><th>4位</th><th>（得点）</th><th>mjlog</th><th>牌譜</th></tr>"
 
 
 revlist.find_all{|l| l["type"] == "start"}.each do |pp|
@@ -100,6 +99,10 @@ revlist.each do |pp|
 			print("<td>" + s[0] + "</td><td align='right'>" + s[1].to_s + "</td>")
 		end
 		puts "<td><a href='mjlog/" + pp["idtime"]  + ".mjson'>json</a></td><td><a href='mjlog/" + pp["idtime"]  + ".mjson.html'>表示</a></td></tr>"
+	elsif pp["type"] == "error" then
+		puts "<tr><td rowspan='2'>" + fulltime(pp["idtime"]) + "</td><td><span title=\"" + CGI.escapeHTML(pp["message"]) + "\">エラー" + (pp["criminal"]+1).to_s + "</span></span></td><td>" + pp["player"].join("</td><td>-</td><td>") + "</td><td>-</td><td><a href='mjlog/" + pp["idtime"]  + ".mjson'>json</a></td><td><a href='mjlog/" + pp["idtime"]  + ".mjson.html'>表示</a></td></tr>"
+		puts "<tr><td colspan='11'>" + ((pp["criminal"]!=-1) ? pp["player"][pp["criminal"]] : "Server Error") + ": " + CGI.escapeHTML(pp["message"]) + "</td></tr>"
+
 	end
 end
 	

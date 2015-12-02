@@ -11,10 +11,11 @@ module Mjai
         
         TIMEOUT_SEC = 600
         
-        def initialize(socket, name)
+        def initialize(socket, name, io = $stderr)
           super()
           @socket = socket
           @closed = false
+          @io = io
           self.name = name
         end
         
@@ -26,7 +27,7 @@ module Mjai
                 return Action.new({:type => :none})
             end
             
-            puts("server -> player %d\t%s" % [self.id, action.to_json()])
+            @io.puts("server -> player %d\t%s" % [self.id, action.to_json()])
             
             begin
                 @socket.puts(action.to_json())
@@ -47,10 +48,10 @@ module Mjai
                 end
                 
                 if line
-                  puts("server <- player %d\t%s" % [self.id, line])
+                  @io.puts("server <- player %d\t%s" % [self.id, line])
                   return Action.from_json(line.chomp(), self.game)
                 else
-                  puts("server :  Player %d has disconnected." % self.id)
+                  @io.puts("server :  Player %d has disconnected." % self.id)
                   @closed = true
                   
                   if action.type == :end_game then
