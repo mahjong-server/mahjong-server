@@ -17,7 +17,8 @@ module TransMaujong
 
     module M extend Fiddle::Importer
       #DLLNAME = "debugging/Debug/debugging.dll"
-      DLLNAME = "MaujongPlugin/sigma0v1.02.dll"
+      DLLNAME = "debugging/wrapper/DebugWorking/wrapper.dll"
+      #DLLNAME = "MaujongPlugin/Occam0.31.dll"
 
       dlload DLLNAME
 
@@ -61,10 +62,10 @@ module TransMaujong
         "#{UINT_STRING} reserved2"
       ])
 
-      MJIKawahai = struct ([
-        "unsigned short hai",
-        "unsigned short state"
-      ])
+      #MJIKawahai = struct ([
+      #  "unsigned short hai",
+      #  "unsigned short state"
+      #])
 
       # 3rd and 4th arguments should be able to contain a memory address for the environment where this program will be executed
       # therefore in 64bit environments, they should be able to contain 64bit unsigned integer
@@ -81,11 +82,16 @@ module TransMaujong
     def initialize
       super()
 
-      alloc_size = M.MJPInterfaceFunc(nil, MJPI::CREATEINSTANCE, 0, 0)
-
+      inst_size = M.MJPInterfaceFunc(nil, MJPI::CREATEINSTANCE, 0, 0)
       safe_margin = 1 ** 10
-      @instance     = Fiddle.malloc(alloc_size + safe_margin)
+      malloc_size = inst_size + safe_margin
+      
+      @instance     = Fiddle.malloc(malloc_size)
+      
       @instance_ptr = Fiddle::Pointer[@instance]
+      # 初期化を忘れるアレなDLLがいるので
+      @instance_ptr[0, malloc_size] = "\0" * malloc_size
+      
       @struct_type  = 0
 
       callback_return_type = M::UINT_TYPE
@@ -149,7 +155,6 @@ module TransMaujong
     end
 
     def callback(inst, message, p1, p2)
-      puts "callback: " + message.to_s
       
       ret = 
       case message
@@ -170,12 +175,13 @@ module TransMaujong
       when MJMI::LASTTSUMOGIRI    then on_last_tsumogiri(p1, p2)
       when MJMI::GETRULE          then on_get_rule(p1, p2)
       when MJMI::SETSTRUCTTYPE    then on_set_struct_type(p1, p2)
-      when MJMI::FUKIDASHI        then 1
+      when MJMI::FUKIDASHI        then on_fukidashi(p1, p2)
       when MJMI::SETAUTOFUKIDASHI then 0
       when MJMI::GETWAREME        then 0
       when MJMI::GETVERSION       then VERSION
       end
       
+      #puts "Send: %d (%d, %d) ret=%d" % [message, p1, p2, ret]
       
       return ret
     end
@@ -188,6 +194,12 @@ module TransMaujong
       end
 
       return MJRL::NOTCARED
+    end
+    
+    def on_fukidashi(p1, p2)
+      str = Fiddle::Pointer[p1].to_s.encode("UTF-8", "Shift_JIS")
+      puts "Fukidashi: %s" % str
+      return 1
     end
 
     def on_last_tsumogiri(p1, p2)
@@ -202,16 +214,16 @@ module TransMaujong
       case p1
       when MJRL::KUITAN         then 1
       when MJRL::KANSAKI        then 0
-      when MJRL::PAO            then 1 # TODO
+      when MJRL::PAO            then 1
       when MJRL::RON            then 1
-      when MJRL::MOCHITEN       then 25000
+      when MJRL::MOCHITEN       then 250 #なぜかx100の単位
       when MJRL::BUTTOBI        then 1
       when MJRL::WAREME         then 0
       when MJRL::AKA5           then 1
-      when MJRL::AKA5S          then 0b001_001_001 # 5sr => 1, 5pr => 1, 5mr => 1
-      when MJRL::SHANYU         then 2
-      when MJRL::SHANYU_SCORE   then 30000
-      when MJRL::NANNYU         then 2
+      when MJRL::AKA5S          then 0b0001_0001_0001 # 5sr => 1, 5pr => 1, 5mr => 1
+      when MJRL::SHANYU         then 0 #2 以下、半荘戦の場合
+      when MJRL::SHANYU_SCORE   then 0 #30000 #ここはなぜか得点そのまま
+      when MJRL::NANNYU         then 2 #1
       when MJRL::NANNYU_SCORE   then 30000
       when MJRL::KUINAOSHI      then 0
       when MJRL::URADORA        then 2
@@ -222,7 +234,7 @@ module TransMaujong
       when MJRL::KARATEN        then 1
       when MJRL::PINZUMO        then 1
       when MJRL::NOTENOYANAGARE then 0b1111
-      when MJRL::KANINREACH     then 2
+      when MJRL::KANINREACH     then 1
       when MJRL::TOPOYAAGARIEND then 1
       when MJRL::KIRIAGE_MANGAN then 0
       when MJRL::DBLRONCHONBO   then 0
@@ -367,7 +379,7 @@ module TransMaujong
 
       Fiddle.free(mjitehai.to_ptr)
 
-      return 0
+      return 1
     end
 
     def on_get_machi(p1, p2)
@@ -454,24 +466,30 @@ module TransMaujong
 
       reached_tile_index = target_player.reach_ho_index
 
-      kawahai = M::MJIKawahai.malloc
-      kawahai_size = Fiddle::Importer.sizeof(kawahai)
+      #kawahai = M::MJIKawahai.malloc
+      #kawahai_size = Fiddle::Importer.sizeof(kawahai)
 
+      kawahai_size = 4 #unsigned short * 2
       result_size = [hiword(p1), target_sutehais.size].min
-      result = Fiddle::Pointer.malloc(kakwahai_size * result_size)
+      #result = Fiddle::Pointer.malloc(kawahai_size * result_size)
+      result = []
 
       target_sutehais.each_with_index do |pai, i|
         break if i >= result_size
 
-        kawahai.hai = pai.to_i
-        kawahai.state = 0
-        kawahai.state |= MJKS::REACH if reached_tile_index && reached_tile_index == i
-        kawahai.state |= MJKS::NAKI  unless target_ho.include?(pai)
+        hai = pai.to_i
+        state = 0
+        state |= MJKS::REACH if reached_tile_index && reached_tile_index == i
+        state |= MJKS::NAKI  unless target_ho.include?(pai)
+        
+        result << hai
+        result << state
 
-        result[kawahai_size * i] = kawahai
+        #result[kawahai_size * i, kawahai_size] = kawahai.to_str
       end
 
-      STD.memmove(p2, result, kawahai_size * result_size)
+      #STD.memmove(p2, result, kawahai_size * result_size)
+      STD.memmove(p2, result.pack("S*"), kawahai_size * result_size)
 
       return result_size
     end
@@ -531,6 +549,11 @@ module TransMaujong
 
       target_pais.pop if target_pais.size % 3 == 2
 
+      
+      if Mjai::ShantenAnalysis.new(target_pais + [agari_hai], -1).shanten > -1
+        return 0
+      end
+      
       hora = Mjai::Hora.new({
         :tehais       => target_pais,
         :furos        => target_furos,
@@ -560,6 +583,7 @@ module TransMaujong
       @tehais_contain_tsumo = true
 
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, action.pai.to_i, 0)
+      #puts "Inte %d (%d, %d) res = %d" % [MJPI::SUTEHAI, action.pai.to_i, 0, res]
 
       orig_tile_ind    = res & MJPIR::HAI_MASK # 0x0000**
       next_action = res - orig_tile_ind        # 0x****00
@@ -583,11 +607,11 @@ module TransMaujong
         when MJPIR::KAN then
           tile_in_quad = Mjai::Pai.from_i(tile_ind)
 
-          furos = self.possible_furo_actions.select do |f|
-            f.type == :ankan && f.consumed.include?(tile_in_quad)
+          furoact = self.possible_furo_actions.select do |f|
+            ([:ankan, :kakan].include?(f.type)) && f.consumed.include?(tile_in_quad)
           end
 
-          create_action({:type => :ankan, :consumed => furo.consumed})
+          furoact.first
 
         when MJPIR::TSUMO then
           create_action({:type => :hora, :target => self, :pai => action.pai})
@@ -600,6 +624,9 @@ module TransMaujong
         end
 
       @tehais_contain_tsumo = false
+      
+      #puts "on_draw decision:"
+      #p response
       return response
     end
 
