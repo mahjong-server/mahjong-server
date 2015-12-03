@@ -45,7 +45,7 @@ def play_game(clients)
 	players = []
 	clients.each do |c|
 		players.push(Mjai::TCPPlayer.new(c.socket, c.screen_name, log_out))
-		log_out.printf(c.screen_name + ": " + c.socket.peeraddr.to_s + "\n");
+		log_out.printf("%s: %s\n", c.screen_name, c.socket.peeraddr.to_s);
 	end
 	STDERR.puts "Game start: " + clients.collect{|c| [c.socket.peeraddr.to_s, c.screen_name]}.to_s
 	
@@ -100,6 +100,7 @@ def play_game(clients)
 		log_out.printf("Other Error " + Time.now.strftime("%Y-%m-%d-%H%M%S") + "\n")
 		STDERR.puts ("Other Error")
 		print_backtrace($!, log_out)
+		print_backtrace($!)
 	end
 	
 	Mjai::FileConverter.new().convert(mjson_path, "#{mjson_path}.html") if mjson_path
@@ -171,7 +172,7 @@ while true
 							raise
 						end
 						
-						clients[clnum].screen_name = URI.encode(message["name"])
+						clients[clnum].screen_name = message["name"].encode("UTF-16BE", "UTF-8", :invalid => :replace, :undef => :replace, :replace => '?').encode("UTF-8")
 					
 					rescue
 						addr = "unknown"

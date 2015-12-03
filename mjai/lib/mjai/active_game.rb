@@ -53,6 +53,10 @@ module Mjai
             @wanpais = @pipais.pop(14)
             dora_marker = @wanpais.pop()
             tehais = Array.new(4){ @pipais.pop(13).sort() }
+            #cheat_player = @players.select{|p| p.name.include?("dll") }
+            #if cheat_player.count == 1
+            #  tehais[ cheat_player[0].id ] = Pai.parse_pais("1112345678999p")
+            #end
             do_action({
                 :type => :start_kyoku,
                 :bakaze => @ag_bakaze,

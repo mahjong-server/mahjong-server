@@ -67,7 +67,7 @@ module Mjai
           end
 
           action_with_logs = action.merge({:logs => responses.map(){ |r| r && r.log }})
-          responses = responses.map(){ |r| (!r || r.type == :none) ? nil : r.merge({:log => nil}) }
+          responses = responses.map(){ |r| (!r || r.type == :none) ? nil : r.dup.merge({:log => nil}) }
           @on_responses.call(action_with_logs, responses) if @on_responses
 
           @previous_action = action
