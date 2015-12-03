@@ -44,9 +44,25 @@ module Mjai
                     end
                   end
                   action = Action.from_json(action_json, self)
-                  responses = do_action(action)
-                  break if action.type == :end_game
-                  response = responses && responses[@my_id]
+                  
+                  begin
+                    responses = do_action(action)
+                    break if action.type == :end_game
+                    response = responses && responses[@my_id]
+                  rescue
+                    ex = $!
+                    mess = ("%s: %s (%p)\n" % [ex.backtrace[0], ex.message, ex.class])
+                    for s in ex.backtrace[1..-1]
+                        mess += ("        %s\n" % s)
+                    end
+                    response = {
+                        :type => :error,
+                        :actor => @my_id,
+                        :message => ex.message,
+                        :log => mess
+                    }
+                  end
+                  
                   response_json = response ? response.to_json() : JSON.dump({"type" => "none"})
               end
               puts("->\t%s" % response_json)

@@ -101,7 +101,7 @@ module TransMaujong
         raise "Initialization of plugin failed"
       end
 
-      @name = "dlltest" #Fiddle::Pointer[M.MJPInterfaceFunc(nil, MJPI::YOURNAME, 0, 0)].to_s
+      @name = "dll_" + Fiddle::Pointer[M.MJPInterfaceFunc(nil, MJPI::YOURNAME, 0, 0)].to_s.encode("UTF-8", "Shift_JIS")
     end
 
     def self.finalizer
@@ -149,7 +149,9 @@ module TransMaujong
     end
 
     def callback(inst, message, p1, p2)
-    	pp message
+      puts "callback: " + message.to_s
+      
+      ret = 
       case message
       when MJMI::GETTEHAI         then on_get_tehai(p1, p2)
       when MJMI::GETMACHI         then on_get_machi(p1, p2)
@@ -173,6 +175,9 @@ module TransMaujong
       when MJMI::GETWAREME        then 0
       when MJMI::GETVERSION       then VERSION
       end
+      
+      
+      return ret
     end
 
     def on_set_struct_type(p1, p2)
@@ -260,7 +265,7 @@ module TransMaujong
       tehais.reject! { |p| p.to_s == "?" }
 
       # remove the tile just drawn in this turn
-      tehais.pop if tehais.size % 3 == 2
+      tehais.pop if @tehais_contain_tsumo
 
       type_selector = -> sym, elem { elem.type == sym } .curry
 
@@ -295,6 +300,9 @@ module TransMaujong
       tehais, furos = tehais_.dup, furos_.dup
 
       tehais.reject { |p| p.to_s == "?" }
+      
+      # remove the tile just drawn in this turn
+      tehais.pop if @tehais_contain_tsumo
 
       type_selector = -> sym, elem { elem.type == sym } .curry
 
@@ -515,8 +523,8 @@ module TransMaujong
       target_furos = []
 
       if p1 == 0 then
-        target_pais  = tehais
-        target_furos = furos
+        target_pais  = tehais.dup
+        target_furos = furos.dup
       else
         target_pais, target_furos = WrapperPlayer.get_tiles(p1, @struct_type)
       end
@@ -548,19 +556,22 @@ module TransMaujong
       @declaration_action = nil
 
       return nil if action.actor != self
+      
+      @tehais_contain_tsumo = true
 
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, action.pai.to_i, 0)
 
-      tile_ind    = res & MJPIR::HAI_MASK # 0x0000**
-      next_action = res - tile_ind        # 0x****00
-
-      is_tsumogiri  = tile_ind == 13
+      orig_tile_ind    = res & MJPIR::HAI_MASK # 0x0000**
+      next_action = res - orig_tile_ind        # 0x****00
+      
+      # まうじゃんのサイトには、ツモ切りは常に13になるとあるが、副露時にそうならないDLLもありそうなので
+      tile_ind = [orig_tile_ind, self.tehais.size - 1].min
+      is_tsumogiri = (tile_ind == (self.tehais.size-1))
 
       response =
         case next_action
         when MJPIR::SUTEHAI then
-          discard_tile_ind = [tile_ind, self.tehais.size - 1].min
-          next_tile = self.tehais[discard_tile_ind]
+          next_tile = self.tehais[tile_ind]
           create_action({:type => :dahai, :pai => next_tile, :tsumogiri => is_tsumogiri})
 
         when MJPIR::REACH then
@@ -582,13 +593,13 @@ module TransMaujong
           create_action({:type => :hora, :target => self, :pai => action.pai})
 
         when MJPIR::NAGASHI then
-          # TODO: kyuushu kyuhai
-          nil
+          create_action({:type => :ryukyoku, :reason => :kyushukyuhai})
 
         else
           raise
         end
 
+      @tehais_contain_tsumo = false
       return response
     end
 
@@ -638,8 +649,7 @@ module TransMaujong
     def action_after_meld(action)
       return nil if action.actor != self
 
-      tile_number = (action.type == :kan) ? action.pai.to_i : 0xff
-      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, tile_number, 0)
+      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, 0xff, 0)
 
       tile_id     = res & MJPIR::HAI_MASK
       next_action = res - tile_id
@@ -649,12 +659,14 @@ module TransMaujong
         when MJPIR::SUTEHAI then
           create_action({:type => :dahai, :pai => self.tehais[tile_id], :tsumogiri => false})
 
-        when MJPIR::TSUMO   then # win by drawing a replacement tile (rinshan-kaiho)
-          self.possible_actions.select { |a| a.type == :hora } .first
 
-        when MJPIR::KAN     then
-          self.possible_furo_actions.select { |f| f.type == :kan && f.consumed.include?(Mjai::Pai.from_i(tile_id)) } .first
-
+# FIXME #
+#        when MJPIR::TSUMO   then # win by drawing a replacement tile (rinshan-kaiho)
+#          self.possible_actions.select { |a| a.type == :hora } .first
+#
+#        when MJPIR::KAN     then
+#          self.possible_furo_actions.select { |f| f.type == :kan && f.consumed.include?(Mjai::Pai.from_i(tile_id)) } .first
+#
         when MJPIR::REACH, MJPIR::NAGASHI then
           raise(ArgumentError, "invalid action after meld")
         else
@@ -666,13 +678,19 @@ module TransMaujong
 
     def on_kong(action)
       actor_seat  = relative_seat_pos(action.actor.id,  self.id)
-      target_seat = relative_seat_pos(action.target.id, self.id)
+      
+      if [:ankan, :kakan].include?(action.type)
+        target_seat = actor_seat
+      else
+        target_seat = relative_seat_pos(action.target.id, self.id)
+      end
 
-      type = (action.type == :daiminkan) ? MJPIR::MINKAN : MJPIR::ANKAN
+      type = (action.type == :ankan) ? MJPIR::ANKAN : MJPIR::MINKAN
 
       M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), type | action.pai.to_i)
 
-      return action_after_meld(action)
+      # カンのあとはリンシャンを引くから、nilを返してon_drawの発生を待つ
+      return nil
     end
 
     def on_discard(action)
@@ -746,6 +764,7 @@ module TransMaujong
     def on_round_start(action)
       @round   = (action.bakaze.data[1] - 1) * 4 + action.kyoku - 1
       @my_wind = relative_seat_pos(action.oya.id, self.id)
+      @tehais_contain_tsumo = false
       M.MJPInterfaceFunc(@instance_ptr, MJPI::STARTKYOKU, @round, @my_wind)
       return nil
     end
