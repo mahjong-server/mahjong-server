@@ -4,7 +4,7 @@ module BitOperation
   WORD_BITS   = 16
 
   def loword(bit)
-    bit & LOWARD_MASK
+    bit & LOWORD_MASK
   end
 
   def hiword(bit)

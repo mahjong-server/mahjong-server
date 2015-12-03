@@ -16,7 +16,8 @@ module TransMaujong
     include BitOperation
 
     module M extend Fiddle::Importer
-      DLLNAME = "plugins/lodoba.dll"
+      #DLLNAME = "debugging/Debug/debugging.dll"
+      DLLNAME = "MaujongPlugin/sigma0v1.02.dll"
 
       dlload DLLNAME
 
@@ -90,7 +91,7 @@ module TransMaujong
       callback_return_type = M::UINT_TYPE
       callback_signature   = [Fiddle::TYPE_VOIDP, -M::UINT_TYPE, -M::UINT_TYPE, -M::UINT_TYPE]
 
-      @callback_closure = Fiddle::Closure::BlockCaller.new(callback_return_type, callback_signature) do |inst, message, p1, p2|
+      @callback_closure = Fiddle::Closure::BlockCaller.new(callback_return_type, callback_signature, abi=Fiddle::Function::STDCALL) do |inst, message, p1, p2|
         callback(inst, message, p1, p2)
       end
 
@@ -100,7 +101,7 @@ module TransMaujong
         raise "Initialization of plugin failed"
       end
 
-      @name = Fiddle::Pointer[M.MJPInterfaceFunc(nil, MJPI::YOURNAME, 0, 0)].to_s
+      @name = "dlltest" #Fiddle::Pointer[M.MJPInterfaceFunc(nil, MJPI::YOURNAME, 0, 0)].to_s
     end
 
     def self.finalizer

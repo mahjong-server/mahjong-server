@@ -1,3 +1,5 @@
+$LOAD_PATH.push('../mjai/lib')
+
 require 'mjai/tcp_client_game.rb'
 
 require './wrapper_player.rb'
@@ -6,7 +8,7 @@ player = TransMaujong::WrapperPlayer.new
 
 game = Mjai::TCPClientGame.new({
   :player => player,
-  :url    => "mjsonp://localhost:/default",
+  :url    => "mjsonp://mjai.hocha.org:11600/default",
   :name   => player.name
 })
 
