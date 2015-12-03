@@ -129,7 +129,7 @@
             // 
             this.mainBox.Location = new System.Drawing.Point(503, 10);
             this.mainBox.Name = "mainBox";
-            this.mainBox.Size = new System.Drawing.Size(430, 430);
+            this.mainBox.Size = new System.Drawing.Size(610, 591);
             this.mainBox.TabIndex = 9;
             this.mainBox.TabStop = false;
             this.mainBox.MouseClick += new System.Windows.Forms.MouseEventHandler(this.mainBox_MouseClick);
@@ -148,7 +148,7 @@
             // autoHora
             // 
             this.autoHora.AutoSize = true;
-            this.autoHora.Location = new System.Drawing.Point(765, 446);
+            this.autoHora.Location = new System.Drawing.Point(300, 472);
             this.autoHora.Name = "autoHora";
             this.autoHora.Size = new System.Drawing.Size(172, 16);
             this.autoHora.TabIndex = 11;
@@ -158,7 +158,7 @@
             // nakiNashi
             // 
             this.nakiNashi.AutoSize = true;
-            this.nakiNashi.Location = new System.Drawing.Point(693, 446);
+            this.nakiNashi.Location = new System.Drawing.Point(228, 472);
             this.nakiNashi.Name = "nakiNashi";
             this.nakiNashi.Size = new System.Drawing.Size(66, 16);
             this.nakiNashi.TabIndex = 12;
@@ -168,7 +168,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(504, 447);
+            this.label5.Location = new System.Drawing.Point(39, 473);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(122, 12);
             this.label5.TabIndex = 13;
@@ -178,7 +178,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(945, 471);
+            this.ClientSize = new System.Drawing.Size(1140, 620);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.nakiNashi);
             this.Controls.Add(this.autoHora);

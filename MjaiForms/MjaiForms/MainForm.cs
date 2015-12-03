@@ -54,32 +54,33 @@ namespace MjaiForms
 
     public partial class MainForm : Form
     {
-        public MainForm()
-        {
-            InitializeComponent();
-        }
 
-        const int PAI_WIDTH = 21;
-        const int PAI_HEIGHT = 29;
-        const int PAI2_WIDTH = 28;
-        const int PAI2_HEIGHT = 22;
+        int PAI_WIDTH ;
+        int PAI_HEIGHT;
+        int PAI2_WIDTH;
+        int PAI2_HEIGHT;
 
-        const int MAINBOX_HEIGHT = 430;
+        int MAINBOX_WIDTH;
+        int MAINBOX_HEIGHT;
 
-        const int TEHAI_OFFSET_X = 78;
-        const int TEHAI_OFFSET_Y = MAINBOX_HEIGHT - 10 - PAI_HEIGHT;
-        const int KAWA_OFFSET_X = 152;
-        const int KAWA_OFFSET_Y = 280;
-        const int ALTERNATIVES_OFFSET_X = 380;
-        const int ALTERNATIVES_OFFSET_Y = 350;
-        const int ALTERNATIVES_WITDH = 80;
-        const int ALTERNATIVES_HEIGHT = 30;
+        int TEHAI_OFFSET_X;
+        int TEHAI_OFFSET_Y;
+        int KAWA_OFFSET_X;
+        int KAWA_OFFSET_Y;
 
-        const int FUROS_OFFSET_X = 420;
-        const int FUROS_OFFSET_Y = MAINBOX_HEIGHT - 10 - PAI_HEIGHT;
+        int ALTERNATIVES_WITDH;
+        int ALTERNATIVES_HEIGHT;
+        int ALTERNATIVES_OFFSET_X;
+        int ALTERNATIVES_OFFSET_Y;
 
-        const int DORAS_OFFSET_X = KAWA_OFFSET_X + PAI_WIDTH * 6 + PAI_WIDTH / 3;
-        const int DORAS_OFFSET_Y = KAWA_OFFSET_Y + PAI_HEIGHT * 3 / 2;
+        int FUROS_OFFSET_X;
+        int FUROS_OFFSET_Y;
+
+        int DORAS_OFFSET_X;
+        int DORAS_OFFSET_Y;
+
+        int CENTER_PANEL_SIZE;
+        int CENTER_PANEL_OFFSET;
 
         string[] KYOKU_STR = new string[] { "東1", "東2", "東3", "東4", "南1", "南2", "南3", "南4", "西1", "西2", "西3", "西4", "北1", "北2", "北3", "北4" };
 
@@ -104,10 +105,11 @@ namespace MjaiForms
         List<string> names;
         List<int> scores;
         List<int> doras;
+        List<int> uradoras;
         List<List<int>> tehais;
         List<List<int>> kawas;
         List<List<int>> kawaNakares;
-        List<List<bool>> kawaTsumogiris;
+        List<List<int>> kawaTsumogiris;
         List<int> reaches;
         List<List<Furo>> fuross;
 
@@ -117,6 +119,72 @@ namespace MjaiForms
         List<Alternatives> alternatives;
 
         List<bool> availablePai;
+
+        public MainForm()
+        {
+
+            paiga = new Image[40];
+            paiga2 = new Image[40];
+
+            for (int i = 0; i < 40; i++)
+            {
+                /*
+                StringBuilder sb = new StringBuilder();
+                sb.Append("mpsz"[i / 10]);
+                sb.Append(i % 10);
+                string tmp = sb.ToString();
+                paiga[i] = Image.FromFile(string.Format("../../paiga/{0}.png", tmp));
+                paiga2[i] = Image.FromFile(string.Format("../../paiga/y_{0}.png", tmp));
+                */
+
+
+                string tmp = "mpsj"[i / 10].ToString();
+                tmp += (i % 10).ToString();
+                try
+                {
+                    paiga[i] = Image.FromFile(string.Format("../../u_real_mdl/{0}.png", tmp));
+                    paiga2[i] = Image.FromFile(string.Format("../../u_real_mdl/2{0}.png", tmp));
+                }
+                catch (FileNotFoundException)
+                {
+                    MessageBox.Show("牌画 " + tmp + " が見つかりません", "MjaiForms", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    Environment.Exit(-1);
+                }
+
+            }
+
+
+        PAI_WIDTH = paiga[39].Width; //21
+        PAI_HEIGHT = paiga[39].Height; //29
+        PAI2_WIDTH = paiga2[39].Width; //28
+        PAI2_HEIGHT = paiga2[39].Height; //22
+
+        int l_TEHAI_MARGIN_BOTTOM = (int)(PAI_HEIGHT * 0.3);
+
+        MAINBOX_WIDTH = (int)Math.Max(PAI_WIDTH * 14 + PAI_HEIGHT * 4 + l_TEHAI_MARGIN_BOTTOM * 2, PAI_WIDTH * 6.8 + PAI_HEIGHT * 10.2 + l_TEHAI_MARGIN_BOTTOM);
+        MAINBOX_HEIGHT = MAINBOX_WIDTH;
+
+        TEHAI_OFFSET_X = (int)(PAI_HEIGHT * 2.7);
+        TEHAI_OFFSET_Y = MAINBOX_HEIGHT - l_TEHAI_MARGIN_BOTTOM - PAI_HEIGHT;
+        KAWA_OFFSET_X = TEHAI_OFFSET_X + PAI_WIDTH * 4;
+        KAWA_OFFSET_Y = TEHAI_OFFSET_Y - (int)(PAI_HEIGHT * 4.1);
+
+        ALTERNATIVES_WITDH = 80;
+        ALTERNATIVES_HEIGHT = 30;
+        ALTERNATIVES_OFFSET_X = TEHAI_OFFSET_X + (int)(PAI_WIDTH * 14);
+        ALTERNATIVES_OFFSET_Y = TEHAI_OFFSET_Y - ALTERNATIVES_HEIGHT - 10;
+
+        FUROS_OFFSET_X = MAINBOX_WIDTH - (int)(PAI_HEIGHT * 0.5);
+        FUROS_OFFSET_Y = TEHAI_OFFSET_Y;
+
+        CENTER_PANEL_SIZE = 120;
+        CENTER_PANEL_OFFSET = (MAINBOX_WIDTH - CENTER_PANEL_SIZE) / 2;
+
+        DORAS_OFFSET_X = KAWA_OFFSET_X + PAI_WIDTH * 6 + PAI_WIDTH / 3;
+        DORAS_OFFSET_Y = KAWA_OFFSET_Y + PAI_HEIGHT * 3 / 2;
+
+        InitializeComponent();
+        }
 
         private static int div(int a, int b) {
             if(a >= 0) return a / b;
@@ -134,25 +202,16 @@ namespace MjaiForms
 
             selected = -1;
 
-            paiga = new Image[40];
-            paiga2 = new Image[40];
-
-            for (int i = 0; i < 40; i++)
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.Append("mpsz"[i / 10]);
-                sb.Append(i % 10);
-                string tmp = sb.ToString();
-                paiga[i] = Image.FromFile(string.Format("../../paiga/{0}.png", tmp));
-                paiga2[i] = Image.FromFile(string.Format("../../paiga/y_{0}.png", tmp));
-            }
-
             font = new Font("MS UI Gothic", 12);
             font2 = new Font("MS UI Gothic", 9);
 
             Algorithm.init();
 
-            mainBox.Image = new Bitmap(mainBox.Width, mainBox.Height, PixelFormat.Format32bppArgb);
+            mainBox.Width = MAINBOX_WIDTH;
+            mainBox.Height = MAINBOX_HEIGHT;
+            mainBox.Image = new Bitmap(MAINBOX_WIDTH, MAINBOX_HEIGHT, PixelFormat.Format32bppArgb);
+
+            this.ClientSize = new Size(mainBox.Location.X + MAINBOX_WIDTH + 10, mainBox.Location.Y + MAINBOX_HEIGHT + 10);
 
             draw();
 
@@ -210,32 +269,39 @@ namespace MjaiForms
 
         void draw()
         {
+            if (mainBox.Image == null) { return; }
             using (var g = Graphics.FromImage(mainBox.Image))
             {
                 g.Clear(Color.FromArgb(0xC0, 0xD4, 0xC3));
-                g.FillRectangle(new SolidBrush(Color.FromArgb(0x96, 0xAF, 0xA3)), new Rectangle(155, 155, 120, 120));
+
+
+                g.TranslateTransform(CENTER_PANEL_OFFSET, CENTER_PANEL_OFFSET);
+                g.FillRectangle(new SolidBrush(Color.FromArgb(0x96, 0xAF, 0xA3)), new Rectangle(0, 0, CENTER_PANEL_SIZE, CENTER_PANEL_SIZE));
 
                 if(kyoku != -1)
-                    g.DrawString(KYOKU_STR[(kyoku - 1) % 16], font, Brushes.Black, new Point(200, 190));
+                    g.DrawString(KYOKU_STR[(kyoku - 1) % 16], font, Brushes.Black, new Point(45, 35));
 
-                g.FillRectangle(Brushes.White, new Rectangle(200, 215, 5, 25));
+                g.FillRectangle(Brushes.White, new Rectangle(45, 60, 5, 25));
 
                 for (int i = 0; i < 5; i++)
                 {
                     for (int j = 0; j < 2; j++)
                     {
-                        g.FillEllipse(Brushes.Black, new Rectangle(200 + 2 * j, 222 + 2 * i, 2, 2));
+                        g.FillEllipse(Brushes.Black, new Rectangle(45 + 2 * j, 67 + 2 * i, 2, 2));
                     }
                 }           
 
                 if (honba != -1)
-                    g.DrawString(honba.ToString(), font2, Brushes.Black, new Point(207, 224));
+                    g.DrawString(honba.ToString(), font2, Brushes.Black, new Point(52, 69));
 
-                g.FillRectangle(Brushes.White, new Rectangle(200 + 20, 215, 5, 25));
-                g.FillEllipse(Brushes.Red, new Rectangle(200 + 20, 226, 4, 4));
+                g.FillRectangle(Brushes.White, new Rectangle(45 + 20, 60, 5, 25));
+                g.FillEllipse(Brushes.Red, new Rectangle(45 + 20, 71, 4, 4));
 
                 if (kyotaku != -1)
-                    g.DrawString(kyotaku.ToString(), font2, Brushes.Black, new Point(207 + 20, 224));
+                    g.DrawString(kyotaku.ToString(), font2, Brushes.Black, new Point(52 + 20, 69));
+                
+                g.ResetTransform();
+
 
                 if (doras != null)
                 {
@@ -246,38 +312,49 @@ namespace MjaiForms
                         g.DrawImage(paiga[doras[i]], new Point(DORAS_OFFSET_X + PAI_WIDTH * i, DORAS_OFFSET_Y));
                     }
                 }
+                if (uradoras != null)
+                {
+                    for (int i = 0; i < uradoras.Count; i++)
+                    {
+                        g.DrawImage(paiga[uradoras[i]], new Point(DORAS_OFFSET_X + PAI_WIDTH * i, DORAS_OFFSET_Y + PAI_HEIGHT));
+                    }
+                }
 
                 for (int i = 0; i < 4; i++)
                 {
                     g.ResetTransform();
-                    g.TranslateTransform(mainBox.Width / 2, mainBox.Height / 2);
+                    g.TranslateTransform(MAINBOX_WIDTH / 2, MAINBOX_HEIGHT / 2);
                     g.RotateTransform(-90 * ((i - id + 4) % 4));
-                    g.TranslateTransform(-mainBox.Width / 2, -mainBox.Height / 2);
+                    g.TranslateTransform(-MAINBOX_WIDTH / 2, -MAINBOX_HEIGHT / 2);
 
                     if (reaches != null)
                     {
                         if (reaches[i] != -1)
                         {
-                            g.FillRectangle(Brushes.White, new Rectangle(175, 268, 80, 7));
-                            g.FillEllipse(Brushes.Red, new Rectangle(213, 270, 4, 4));
+                            int nagasa = 80;
+                            int haba = 7;
+                            Rectangle rct = new Rectangle(CENTER_PANEL_OFFSET + (CENTER_PANEL_SIZE - nagasa) / 2, CENTER_PANEL_OFFSET + CENTER_PANEL_SIZE - haba, nagasa, haba);
+                            g.FillRectangle(Brushes.White, rct);
+                            g.FillEllipse(Brushes.Red, new Rectangle(rct.X + 38, rct.Y + 2, 4, 4));
                         }
                     }
 
                     if (names != null)
                     {
+                        Point pt = new Point(CENTER_PANEL_OFFSET + 10, CENTER_PANEL_OFFSET + CENTER_PANEL_SIZE - 17);
                         if (i == (kyoku - 1))
                         {
-                            g.DrawString(names[i], font, Brushes.Red, new Point(185, 258));
+                            g.DrawString(names[i], font, Brushes.Red, pt);
                         }
                         else
                         {
-                            g.DrawString(names[i], font, Brushes.Black, new Point(185, 258));
+                            g.DrawString(names[i], font, Brushes.Black, pt);
                         }
 
                     }
 
                     if (scores != null)
-                        g.DrawString(scores[i].ToString(), font, Brushes.Black, new Point(193, 248));
+                        g.DrawString(scores[i].ToString(), font, Brushes.Black, new Point(CENTER_PANEL_OFFSET + 38, CENTER_PANEL_OFFSET + CENTER_PANEL_SIZE - 27));
 
                     if (tehais != null)
                     {
@@ -309,20 +386,20 @@ namespace MjaiForms
                             if (j == reaches[i])
                             {
                                 im = paiga2[kawas[i][j]];
-                                po = new Point(KAWA_OFFSET_X + (j % 6) * 21, KAWA_OFFSET_Y + j / 6 * 29 + 8);
+                                po = new Point(KAWA_OFFSET_X + (j % 6) * PAI_WIDTH, KAWA_OFFSET_Y + j / 6 * PAI_HEIGHT + 8);
                                 rect = new Rectangle(po, new Size(PAI2_WIDTH, PAI2_HEIGHT));
                                 
                                 
                             }
                             else {
                                 im = paiga[kawas[i][j]];
-                                po = new Point(KAWA_OFFSET_X + (j % 6) * 21, KAWA_OFFSET_Y + j / 6 * 29);
+                                po = new Point(KAWA_OFFSET_X + (j % 6) * PAI_WIDTH, KAWA_OFFSET_Y + j / 6 * PAI_HEIGHT);
                                 rect = new Rectangle(po, new Size(PAI_WIDTH, PAI_HEIGHT));
                             }
 
                             g.DrawImage(im, po);
 
-                            if (kawaTsumogiris!=null && kawaTsumogiris[i][j])
+                            if (kawaTsumogiris!=null && kawaTsumogiris[i].Any(_ => _ == j))
                                 g.FillRectangle(new SolidBrush(Color.FromArgb(0x60, Color.Azure)), rect);
 
                             if (kawaNakares != null && kawaNakares[i].Any(_ => _ == j))
@@ -356,12 +433,13 @@ namespace MjaiForms
                                 {
                                     if (k == relatedPos)
                                     {
+                                        int paiga2offset = PAI_HEIGHT - PAI2_HEIGHT;
                                         x -= PAI2_WIDTH;
-                                        g.DrawImage(paiga2[f.pai], new Point(x, FUROS_OFFSET_Y + 8));
+                                        g.DrawImage(paiga2[f.pai], new Point(x, FUROS_OFFSET_Y + paiga2offset));
 
                                         if (f.is_kakan)
                                         {
-                                            var po = new Point(x, FUROS_OFFSET_Y + 8 - PAI2_HEIGHT);
+                                            var po = new Point(x, FUROS_OFFSET_Y + paiga2offset - PAI2_HEIGHT);
                                             g.DrawImage(paiga2[f.kakan], po);
                                             if (chankan_pai == f.kakan)
                                             {
@@ -393,7 +471,7 @@ namespace MjaiForms
                     int x = ALTERNATIVES_OFFSET_X;
                     foreach (var alt in alternatives)
                     {
-                        x -= 80;
+                        x -= ALTERNATIVES_WITDH;
                         g.FillRectangle(new SolidBrush(Color.FromArgb(0x80, Color.Black)), new Rectangle(x, ALTERNATIVES_OFFSET_Y, ALTERNATIVES_WITDH, ALTERNATIVES_HEIGHT));
 
                         g.DrawString(alt.ToString(), font, Brushes.White, new RectangleF(x, ALTERNATIVES_OFFSET_Y, ALTERNATIVES_WITDH, ALTERNATIVES_HEIGHT));
@@ -460,8 +538,6 @@ namespace MjaiForms
                             chankan_pai = -1;
                             tehais = (((string[][])json.tehais).Select<string[], List<int>>(tehai => (tehai.Select<string, int>(parsePai)).ToList<int>())).ToList<List<int>>();
                             for (int i = 0; i < 4; i++) tehais[i].Sort(new Comparison<int>(comparePai));
-                            kawaTsumogiris = new List<List<bool>>();
-                            for (int i = 0; i < 4; i++) kawaTsumogiris.Add(new List<bool>());
                             kawas = new List<List<int>>();
                             for(int i = 0; i < 4; i++) kawas.Add(new List<int>());
                             reaches = new List<int>();
@@ -470,8 +546,11 @@ namespace MjaiForms
                             for (int i = 0; i < 4; i++) fuross.Add(new List<Furo>());
                             kawaNakares = new List<List<int>>();
                             for (int i = 0; i < 4; i++) kawaNakares.Add(new List<int>());
+                            kawaTsumogiris = new List<List<int>>();
+                            for (int i = 0; i < 4; i++) kawaTsumogiris.Add(new List<int>());
                             doras = new List<int>();
                             doras.Add(parsePai((string)json.dora_marker));
+                            uradoras = new List<int>();
                             response = Protocol.none();
                             break;
                         case "dora":
@@ -547,8 +626,9 @@ namespace MjaiForms
                                 {
                                     response = Protocol.dahai(id, pai, true);
                                     tehais[id].RemoveAt(tehais[id].Count - 1);
-                                    kawaTsumogiris[id].Add(true);
+                                    
                                     kawas[id].Add(pai);
+                                    kawaTsumogiris[id].Add(kawas[id].Count - 1);
                                 }
                                 else
                                 {
@@ -572,8 +652,9 @@ namespace MjaiForms
                                         response = Protocol.dahai(id, sute, tsumogiri);
                                         tehais[id].Remove(sute);
                                         tehais[id].Sort(new Comparison<int>(comparePai));
-                                        kawaTsumogiris[id].Add(tsumogiri);
+                                        
                                         kawas[id].Add(sute);
+                                        if (tsumogiri) { kawaTsumogiris[id].Add(kawas[id].Count - 1); }
                                     }
                                     else if (selection == Selection.ButtonClick)
                                     {
@@ -717,8 +798,9 @@ namespace MjaiForms
 
                                 tehais[id].Remove(sute);
                                 tehais[id].Sort(new Comparison<int>(comparePai));
-                                kawaTsumogiris[id].Add(tsumogiri);
+                                
                                 kawas[id].Add(sute);
+                                if (tsumogiri) { kawaTsumogiris[id].Add(kawas[id].Count - 1); }
                             }
 
                             availablePai = Enumerable.Repeat(reaches[id] == -1, 14).ToList();
@@ -735,11 +817,11 @@ namespace MjaiForms
 
                             if (actor != id)
                             {
-                                kawaTsumogiris[actor].Add((bool)json.tsumogiri);
                                 if ((bool)json.tsumogiri)
                                 {
                                     tehais[actor].RemoveAt(tehais[actor].Count - 1);
                                     kawas[actor].Add(pai);
+                                    kawaTsumogiris[actor].Add(kawas[actor].Count - 1);
                                 }
                                 else
                                 {
@@ -930,6 +1012,11 @@ namespace MjaiForms
                                     tehais[ac].Add(parsePai((string)json.pai));
                                 }
 
+                                if (json.IsDefined("uradora_markers"))
+                                {
+                                    uradoras = (((string[])json.uradora_markers).Select<string, int>(parsePai)).ToList<int>();
+                                }
+
                                 availablePai = Enumerable.Repeat(ac == id, 14).ToList();
 
                                 caption = "和了 " + names[(int)json.actor];
@@ -1094,7 +1181,7 @@ namespace MjaiForms
                 response = Protocol.dahai(id, sute, false);
                 tehais[id].Remove(sute);
                 tehais[id].Sort(new Comparison<int>(comparePai));
-                kawaTsumogiris[id].Add(false);
+                
                 kawas[id].Add(sute);
             }
             else
