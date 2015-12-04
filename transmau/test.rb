@@ -2,6 +2,7 @@ $LOAD_PATH.push('../mjai/lib')
 
 require 'mjai/tcp_client_game.rb'
 
+$dllname = "MaujongPlugin/%s.dll" % ARGV[0]
 require './wrapper_player.rb'
 
 player = TransMaujong::WrapperPlayer.new

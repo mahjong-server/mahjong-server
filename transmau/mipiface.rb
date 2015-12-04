@@ -85,11 +85,14 @@ module TransMaujong
     KARATEN        = 20
     PINZUMO        = 21
     NOTENOYANAGARE = 22
-    KANINREACH     = 24
-    TOPOYAAGARIEND = 25
-    KIRIAGE_MANGAN = 26
-    DBLRONCHONBO   = 27
+    KANINREACH     = 23
+    TOPOYAAGARIEND = 24
+    KIRIAGE_MANGAN = 25
+    DBLRONCHONBO   = 26
 
+  end
+  
+  module MJR
     NOTCARED       = 0xffff_ffff
   end
 

@@ -17,10 +17,11 @@ module TransMaujong
 
     module M extend Fiddle::Importer
       #DLLNAME = "debugging/Debug/debugging.dll"
-      DLLNAME = "debugging/wrapper/DebugWorking/wrapper.dll"
+      #DLLNAME = "debugging/wrapper/DebugWorking/wrapper.dll"
       #DLLNAME = "MaujongPlugin/Occam0.31.dll"
 
-      dlload DLLNAME
+      #dlload DLLNAME
+      dlload $dllname
 
       UINT_TYPE   = -Fiddle::TYPE_INT
       UINT_STRING = "unsigned long"
@@ -181,7 +182,7 @@ module TransMaujong
       when MJMI::GETVERSION       then VERSION
       end
       
-      #puts "Send: %d (%d, %d) ret=%d" % [message, p1, p2, ret]
+      puts "Send: %d (%d, %d) ret=%d" % [message, p1, p2, ret]
       
       return ret
     end
@@ -193,7 +194,7 @@ module TransMaujong
         return old_type
       end
 
-      return MJRL::NOTCARED
+      return MJR::NOTCARED
     end
     
     def on_fukidashi(p1, p2)
@@ -230,7 +231,7 @@ module TransMaujong
       when MJRL::SCORE0REACH    then 0
       when MJRL::RYANSHIBA      then 0
       when MJRL::DORAPLUS       then 1
-      when MJRL::FURITENREACH   then 0b11
+      when MJRL::FURITEN_REACH  then 0b11
       when MJRL::KARATEN        then 1
       when MJRL::PINZUMO        then 1
       when MJRL::NOTENOYANAGARE then 0b1111
@@ -297,8 +298,8 @@ module TransMaujong
 
       mji.tehai = [tehais.map(&:to_i), [0] * (14 - mji.tehai_max)].flatten
 
-      least_tile  = -> furo  { [furo.pai, furo.consumed].flatten.min }
-      array_maker = -> furos { [furos.map(&:least_tile).map(&:to_i), [0] * (4 - furos.size)].flatten }
+      least_tile  = -> furo  { furo.pais.flatten.min }
+      array_maker = -> furos { [furos.map(&least_tile).map(&:to_i), [0] * (4 - furos.size)].flatten }
 
       mji.minshun = array_maker[chows]
       mji.minkou  = array_maker[pongs]
@@ -334,16 +335,16 @@ module TransMaujong
 
       mji1.tehai = [tehais.map(&:to_i_r), [0] * (14 - mji1.tehai_max)].flatten
 
-      least_tile  = -> furo  { [furo.pai, furo.consumed].flatten.min }
-      array_maker = -> furos { [furos.map(&:least_tile).map(&:to_i_r), [0] * (4 - furos.size)].flatten }
+      least_tile  = -> furo  { furo.pais.min }
+      array_maker = -> furos { [furos.map(&least_tile).map(&:to_i_r), [0] * (4 - furos.size)].flatten }
 
       mji1.minshun = array_maker[chows]
       mji1.minkou  = array_maker[pongs]
       mji1.minkan  = array_maker[open_kongs]
       mji1.ankan   = array_maker[closed_kongs]
 
-      sort_tile = -> furo { [furo.pai, furo.consumed].flatten.sort }
-      maker = -> furos, n { [furos.map(&:sort_tile).map(&:to_i_r), [[0] * n] * (4 - furos.size)].reject {|e| e == [] }.transpose.flatten(1) }
+      sort_tile = -> furo { furo.pais.sort }
+      maker = -> furos, n { [furos.map(&sort_tile).map(&:to_i_r), [[0] * n] * (4 - furos.size)].reject {|e| e == [] }.transpose.flatten(1) }
  
       minshun = maker[chows, 3]
       minkou  = maker[pongs, 3] 
@@ -499,7 +500,7 @@ module TransMaujong
     end
 
     def on_kk_hai_ability(p1, p2)
-      return 0 if self.game.first_turn?
+      return 0 if !self.game.first_turn?
 
       num_terminals_and_honors = self.tehais.uniq.count { |pai| pai.yaochu? }
 
@@ -583,7 +584,11 @@ module TransMaujong
       @tehais_contain_tsumo = true
 
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, action.pai.to_i, 0)
-      #puts "Inte %d (%d, %d) res = %d" % [MJPI::SUTEHAI, action.pai.to_i, 0, res]
+      puts "Draw (%d, %d) res = %d" % [action.pai.to_i, 0, res]
+      
+      if res == MJR::NOTCARED then
+        res = 13 | MJPIR::SUTEHAI
+      end
 
       orig_tile_ind    = res & MJPIR::HAI_MASK # 0x0000**
       next_action = res - orig_tile_ind        # 0x****00
@@ -625,8 +630,8 @@ module TransMaujong
 
       @tehais_contain_tsumo = false
       
-      #puts "on_draw decision:"
-      #p response
+      puts "on_draw decision:"
+      p response
       return response
     end
 
@@ -677,14 +682,19 @@ module TransMaujong
       return nil if action.actor != self
 
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, 0xff, 0)
+      puts "After (%d, %d) res = %d" % [0xff, 0, res]
+      if res == MJR::NOTCARED then
+        res = 13 | MJPIR::SUTEHAI
+      end
 
-      tile_id     = res & MJPIR::HAI_MASK
-      next_action = res - tile_id
+      orig_tile_ind     = res & MJPIR::HAI_MASK
+      next_action = res - orig_tile_ind
+      tile_ind = [orig_tile_ind, self.tehais.size - 1].min
 
       response =
         case next_action
         when MJPIR::SUTEHAI then
-          create_action({:type => :dahai, :pai => self.tehais[tile_id], :tsumogiri => false})
+          create_action({:type => :dahai, :pai => self.tehais[tile_ind], :tsumogiri => false})
 
 
 # FIXME #
@@ -728,6 +738,7 @@ module TransMaujong
       occured = (prev.type == :reach) ? MJPIR::REACH : MJPIR::SUTEHAI
 
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(actor_seat, actor_seat), occured | action.pai.to_i)
+      puts "Discard(%d, %d) res = %d" % [make_lparam(actor_seat, actor_seat), occured | action.pai.to_i, res]
 
       return nil if res == 0
 
