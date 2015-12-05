@@ -350,6 +350,9 @@ $ ->
   $("#go-button").click ->
     currentActionId = parseInt($("#action-id-label").val())
     renderCurrentAction()
+  $("#last-button").click ->
+    currentActionId = getCurrentKyoku().actions.length - 1
+    return renderCurrentAction()
   
   $("#kyokuSelector").change ->
     currentKyokuId = parseInt($("#kyokuSelector").val())

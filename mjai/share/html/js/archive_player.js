@@ -496,6 +496,10 @@ $(function() {
     currentActionId = parseInt($("#action-id-label").val());
     return renderCurrentAction();
   });
+  $("#last-button").click(function() {
+    currentActionId = getCurrentKyoku().actions.length - 1;
+    return renderCurrentAction();
+  });
   $("#kyokuSelector").change(function() {
     currentKyokuId = parseInt($("#kyokuSelector").val());
     currentActionId = 0;
