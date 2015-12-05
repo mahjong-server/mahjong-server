@@ -49,6 +49,12 @@ module Mjai
                     responses = do_action(action)
                     break if action.type == :end_game
                     response = responses && responses[@my_id]
+                  rescue GameFailError
+                    response = {
+                        :type => :error,
+                        :actor => @my_id,
+                        :message => "%s - Original Action: %s, My Response: %s" % [$!.message, $!.orig_action.to_s, $!.response.to_s]
+                    }
                   rescue
                     ex = $!
                     mess = ("%s: %s (%p)\n" % [ex.backtrace[0], ex.message, ex.class])
