@@ -104,7 +104,7 @@ module TransMaujong
 
       callback_addr = Fiddle::Pointer[@callback_closure].to_i
 
-      unless M.MJPInterfaceFunc(nil, MJPI::INITIALIZE, 0, callback_addr) == 0 then
+      unless M.MJPInterfaceFunc(@instance_ptr, MJPI::INITIALIZE, 0, callback_addr) == 0 then
         raise "Initialization of plugin failed"
       end
 
@@ -172,7 +172,8 @@ module TransMaujong
       when MJMI::GETHAIREMAIN     then on_get_hai_remain(p1, p2)
       when MJMI::GETVISIBLEHAIS   then on_get_visible_hais(p1, p2)
       when MJMI::KKHAIABILITY     then on_kk_hai_ability(p1, p2)
-      when MJMI::SSPUTOABILITY    then on_ssputo_ability(p1, p2)
+      when MJMI::ANKANABILITY     then on_ankan_ability(p1, p2)
+      when MJMI::SSPUTOABILITY    then 0
       when MJMI::LASTTSUMOGIRI    then on_last_tsumogiri(p1, p2)
       when MJMI::GETRULE          then on_get_rule(p1, p2)
       when MJMI::SETSTRUCTTYPE    then on_set_struct_type(p1, p2)
@@ -180,6 +181,7 @@ module TransMaujong
       when MJMI::SETAUTOFUKIDASHI then 0
       when MJMI::GETWAREME        then 0
       when MJMI::GETVERSION       then VERSION
+      else raise(ArgumentError, "Unknown callback message: #{message}")
       end
       
       puts "Send: %d (%d, %d) ret=%d" % [message, p1, p2, ret]
@@ -271,14 +273,14 @@ module TransMaujong
       puts "]"
     end
 
-    def self.get_mjitehai(tehais_, furos_)
+    def self.get_mjitehai(tehais_, furos_, contain_tsumo)
       tehais, furos = tehais_.dup, furos_.dup
 
       # remove unknown tiles
       tehais.reject! { |p| p.to_s == "?" }
 
       # remove the tile just drawn in this turn
-      tehais.pop if @tehais_contain_tsumo
+      tehais.pop if contain_tsumo
 
       type_selector = -> sym, elem { elem.type == sym } .curry
 
@@ -305,17 +307,20 @@ module TransMaujong
       mji.minkou  = array_maker[pongs]
       mji.minkan  = array_maker[open_kongs]
       mji.ankan   = array_maker[closed_kongs]
+      
+      puts "get_mjitehai (%d)" % mji.tehai_max
+      p mji.tehai
 
       return mji
     end
 
-    def self.get_mjitehai1(tehais_, furos_)
+    def self.get_mjitehai1(tehais_, furos_, contain_tsumo)
       tehais, furos = tehais_.dup, furos_.dup
 
       tehais.reject { |p| p.to_s == "?" }
       
       # remove the tile just drawn in this turn
-      tehais.pop if @tehais_contain_tsumo
+      tehais.pop if contain_tsumo
 
       type_selector = -> sym, elem { elem.type == sym } .curry
 
@@ -361,6 +366,9 @@ module TransMaujong
       	mji1.minkan_hai[i] = minkan[i]
       	mji1.ankan_hai[i]  = ankan[i]
       end
+      
+      puts "get_mjitehai1"
+      pp mji1
 
       return mji1
     end
@@ -371,9 +379,9 @@ module TransMaujong
 
       mjitehai =
         if @struct_type == 0 then
-          WrapperPlayer.get_mjitehai( target_player.tehais, target_player.furos)
+          WrapperPlayer.get_mjitehai( target_player.tehais, target_player.furos, @tehais_contain_tsumo)
         else
-          WrapperPlayer.get_mjitehai1(target_player.tehais, target_player.furos)
+          WrapperPlayer.get_mjitehai1(target_player.tehais, target_player.furos, @tehais_contain_tsumo)
         end
 
       STD.memmove(p2, mjitehai, Fiddle::Importer.sizeof(mjitehai))
@@ -507,8 +515,15 @@ module TransMaujong
       return (num_terminals_and_honors >= 9) ? 1 : 0
     end
 
-    def on_ssputo_ability(p1, p2)
-      return 0
+    def on_ankan_ability(p1, p2)
+      kanlist = self.possible_furo_actions.select{ |f| [:ankan, :kakan].include?(f.type) }.map{ |f| f.consumed[0].to_i }
+      
+      if ( kanlist.size == 0 ) then
+        return 0
+      end
+      
+      STD.memmove(p1, result.pack("S*"), 2 * kanlist.size)
+      return kanlist.size
     end
 
     def self.get_tiles(pointer, struct_type)
@@ -585,13 +600,15 @@ module TransMaujong
 
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, action.pai.to_i, 0)
       puts "Draw (%d, %d) res = %d" % [action.pai.to_i, 0, res]
+      p self.tehais
       
-      if res == MJR::NOTCARED then
-        res = 13 | MJPIR::SUTEHAI
-      end
 
       orig_tile_ind    = res & MJPIR::HAI_MASK # 0x0000**
       next_action = res - orig_tile_ind        # 0x****00
+      if res == MJR::NOTCARED then
+        orig_tile_ind = 13
+        next_action = MJPIR::SUTEHAI
+      end
       
       # まうじゃんのサイトには、ツモ切りは常に13になるとあるが、副露時にそうならないDLLもありそうなので
       tile_ind = [orig_tile_ind, self.tehais.size - 1].min
@@ -604,19 +621,39 @@ module TransMaujong
           create_action({:type => :dahai, :pai => next_tile, :tsumogiri => is_tsumogiri})
 
         when MJPIR::REACH then
-          p self.tehais
           next_tile = self.tehais[tile_ind]
-          @declaration_action = create_action({:type => :dahai, :pai => next_tile, :tsumogiri => is_tsumogiri})
-          create_action({:type => :reach})
+          
+          if self.can_reach?
+            @declaration_action = create_action({:type => :dahai, :pai => next_tile, :tsumogiri => is_tsumogiri})
+            create_action({:type => :reach})
+          else
+            create_action({:type => :dahai, :pai => next_tile, :tsumogiri => is_tsumogiri, :log => "DLLWarning: Tried REACH but cannot reach now. res = 0x%x" % res})
+          end
 
         when MJPIR::KAN then
-          tile_in_quad = Mjai::Pai.from_i(tile_ind)
+          tile_in_quad = Mjai::Pai.from_i(orig_tile_ind).remove_red()
+          
+          puts "MJPIR::KAN tile_in_quad"
+          p tile_in_quad
 
           furoact = self.possible_furo_actions.select do |f|
             ([:ankan, :kakan].include?(f.type)) && f.consumed.include?(tile_in_quad)
           end
-
-          furoact.first
+          
+          if furoact.size > 0 then
+            furoact.first
+          else
+            tile_by_index = self.tehais[tile_ind]
+            furoact = self.possible_furo_actions.select do |f|
+              ([:ankan, :kakan].include?(f.type)) && f.consumed.include?(tile_by_index)
+            end
+            
+            if furoact.size > 0 then
+              furoact.first.merge({:log => "DLLWarning: KAN tile specified by index (should be hai_no). res = 0x%x" % res})
+            else
+              nil
+            end
+          end
 
         when MJPIR::TSUMO then
           create_action({:type => :hora, :target => self, :pai => action.pai})
@@ -625,10 +662,18 @@ module TransMaujong
           create_action({:type => :ryukyoku, :reason => :kyushukyuhai})
 
         else
-          raise
+          nil
         end
 
       @tehais_contain_tsumo = false
+      
+      if response == nil then
+        raise Mjai::GameFailError.new("Unexpected MJPI::SUTEHAI result %d" % res, self.id, action.to_s, nil)
+      end
+      
+      if !(defined? resonse.log) then
+        response = response.merge({:log => "sres0x%x" % res})
+      end
       
       puts "on_draw decision:"
       p response
@@ -683,8 +728,9 @@ module TransMaujong
 
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, 0xff, 0)
       puts "After (%d, %d) res = %d" % [0xff, 0, res]
+      
       if res == MJR::NOTCARED then
-        res = 13 | MJPIR::SUTEHAI
+        return create_action({:type => :dahai, :pai => self.possible_dahais[-1], :tsumogiri => false})
       end
 
       orig_tile_ind     = res & MJPIR::HAI_MASK
@@ -724,7 +770,23 @@ module TransMaujong
 
       type = (action.type == :ankan) ? MJPIR::ANKAN : MJPIR::MINKAN
 
-      M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), type | action.pai.to_i)
+      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), type | action.pai.to_i)
+      puts "Kan (%d, %d) res = %d" % [make_lparam(target_seat, actor_seat), type | action.pai.to_i, res]
+      
+      if res == 0 || res == MJR::NOTCARED then
+        return nil
+      end
+      
+      # 槍槓
+      if (res & MJPIR::RON ) != 0 then
+        act = self.possible_actions.select { |a| a.type == :hora } .first
+        
+        if act == nil then
+          raise Mjai::GameFailError.new("Unexpected MJPI::ONACTION (Chankan) result %d" % res, self.id, action.to_s, nil)
+        end
+        
+        return act.merge({:log => "Chankan res = 0x%x" % res})
+      end
 
       # カンのあとはリンシャンを引くから、nilを返してon_drawの発生を待つ
       return nil
@@ -740,7 +802,7 @@ module TransMaujong
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(actor_seat, actor_seat), occured | action.pai.to_i)
       puts "Discard(%d, %d) res = %d" % [make_lparam(actor_seat, actor_seat), occured | action.pai.to_i, res]
 
-      return nil if res == 0
+      return nil if res == 0 || res == MJR::NOTCARED
 
       no_aka5_flag = res & MJPIR::HAI_MASK
       prefer_aka5  = no_aka5_flag == 0
@@ -770,6 +832,7 @@ module TransMaujong
 
         end
 
+      response = (response == nil) ? nil : response.merge({:log => "ares0x%x" % res})
       return response
     end
 
