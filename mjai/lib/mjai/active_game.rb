@@ -50,13 +50,21 @@ module Mjai
           catch(:end_kyoku) do
             @pipais = @all_pais.shuffle()
             @pipais.shuffle!()
+            
+            cheat_player = @players.select{|p| p.name.include?("cheat") }
+            if cheat_player.count == 1 # && false
+              cheattehais = Pai.parse_pais("468m5pr2458sPPCCC")
+              cheattehais.each { |p|
+                pai_index = @pipais.index(p)
+                @pipais.delete_at(pai_index)
+              }
+              insert_index = @pipais.size - 14 - 1 - 13 * cheat_player[0].id
+              @pipais.insert(insert_index, cheattehais).flatten!
+            end
+            
             @wanpais = @pipais.pop(14)
             dora_marker = @wanpais.pop()
             tehais = Array.new(4){ @pipais.pop(13).sort() }
-            #cheat_player = @players.select{|p| p.name.include?("dll") }
-            #if cheat_player.count == 1
-            #  tehais[ cheat_player[0].id ] = Pai.parse_pais("1112345678999p")
-            #end
             do_action({
                 :type => :start_kyoku,
                 :bakaze => @ag_bakaze,
@@ -275,10 +283,10 @@ module Mjai
              player.sutehais.all?{ |p| p.yaochu? }
               is_nagashi = true
               if player == self.oya
-                nagashi_deltas = nagashi_deltas.collect{|i| i - 4000}
+                nagashi_deltas = nagashi_deltas.map{|i| i - 4000}
                 nagashi_deltas[player.id] += (4000 + 12000)
               else
-                nagashi_deltas = nagashi_deltas.collect{|i| i - 2000}
+                nagashi_deltas = nagashi_deltas.map{|i| i - 2000}
                 nagashi_deltas[player.id] += (2000 + 8000)
                 nagashi_deltas[self.oya.id] -= 2000
               end
