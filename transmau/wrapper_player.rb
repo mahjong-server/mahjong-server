@@ -768,9 +768,11 @@ module TransMaujong
       end
 
       type = (action.type == :ankan) ? MJPIR::ANKAN : MJPIR::MINKAN
+      
+      pai_id = action.consumed[0].to_i
 
-      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), type | action.pai.to_i)
-      puts "Kan (%d, %d) res = %d" % [make_lparam(target_seat, actor_seat), type | action.pai.to_i, res]
+      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), type | pai_id)
+      puts "Kan (%d, %d) res = %d" % [make_lparam(target_seat, actor_seat), type | pai_id, res]
       
       if res == 0 || res == MJR::NOTCARED then
         return nil
