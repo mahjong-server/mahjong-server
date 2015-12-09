@@ -68,7 +68,7 @@ module Mjai
 
           action_with_logs = action.merge({:logs => responses.map(){ |r| r && r.log }})
           responses = responses.map() do |r|
-            if (!r || r.type == :none) then
+            if (!r) then
               nil
             elsif ( defined? r.log ) then
               r
@@ -194,7 +194,13 @@ module Mjai
           end
         end
         
-        def validate_response_type(response, player, action)
+        def validate_response_type(orig_response, player, action)
+          if orig_response && orig_response.type == :none
+            response = nil
+          else
+            response = orig_response
+          end
+          
           if response && response.type == :error
             raise(ValidationError, response.message)
           end
