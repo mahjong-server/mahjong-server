@@ -116,21 +116,21 @@ module TransMaujong
     @@offset_map = {"m" => 0, "p" => 9 , "s" => 18, "t" => 27}
 
     # Mjai::Pai -> Pai number
-    def to_i
+    def to_mau_i
       # Maujong defines pai's id below
       # 1m, ..., 9m, 1p, ..., 9p, 1s, ..., 9s,  E,  S,  W,  N,  P,  F,  C
       #  0, ...,  8,  9, ..., 17, 18, ..., 26, 27, 28, 29, 30, 31, 32, 33
       @number + @@offset_map[@type] - 1
     end
 
-    def to_i_r
+    def to_mau_i_r
       red_offset = (@red) ? 64 : 0
 
       @number + @@offset_map[@type] - 1 + red_offset
     end
 
     # Pai number -> Mjai::Pai
-    def self.from_i(pai_number)
+    def self.from_mau_i(pai_number)
       red  = false
       type = nil
 
@@ -164,7 +164,7 @@ module TransMaujong
   class Mjai::Furo
     # returns pair whose 1st element is furo type, 2nd element is pai number of the pais that consist of furo
     # in the case of minshun, 2nd element is the minimum number among the pais
-    def to_pair
+    def to_mau_pair
       mentsu = self.to_mentsu
 
       furo_type =
@@ -178,7 +178,7 @@ module TransMaujong
           end
       end
 
-      return [furo_type, mentsu.pais.map(&:to_i).min]
+      return [mentsu.pais.map(&:to_mau_i).min, furo_type]
     end
 
     def type_in_mau
@@ -195,16 +195,16 @@ module TransMaujong
       end
     end
 
-    def self.from_i(pai_number, type)
-      taken_pai = Mjai::Pai::from_i(pai_number)
+    def self.from_mau_pair(pai_number, type)
+      taken_pai = Mjai::Pai::from_mau_i(pai_number)
 
       consumed_pais = case type
       when :minshun
         [taken_pai.succ, taken_pai.succ.succ]
       when :minko
-        [Mjai::Pai::from_i(pai_number)] * 2
+        [Mjai::Pai::from_mau_i(pai_number)] * 2
       when :minkan, :ankan
-        [Mjai::Pai::from_i(pai_number)] * 3
+        [Mjai::Pai::from_mau_i(pai_number)] * 3
       else
         raise(ArgumentError, "wrong type: #{type}")
       end

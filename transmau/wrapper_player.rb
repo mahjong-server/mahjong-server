@@ -108,7 +108,7 @@ module TransMaujong
         raise "Initialization of plugin failed"
       end
 
-      @name = "dll_" + Fiddle::Pointer[M.MJPInterfaceFunc(nil, MJPI::YOURNAME, 0, 0)].to_s.encode("UTF-8", "Shift_JIS")
+      @name = "cheat_" + Fiddle::Pointer[M.MJPInterfaceFunc(nil, MJPI::YOURNAME, 0, 0)].to_s.encode("UTF-8", "Shift_JIS")
     end
 
     def self.finalizer
@@ -299,10 +299,10 @@ module TransMaujong
       mji.minkan_max  = open_kongs.size
       mji.ankan_max   = closed_kongs.size
 
-      mji.tehai = [tehais.map(&:to_i), [0] * (14 - mji.tehai_max)].flatten
+      mji.tehai = [tehais.map(&:to_mau_i), [0] * (14 - mji.tehai_max)].flatten
 
       least_tile  = -> furo  { furo.pais.flatten.min }
-      array_maker = -> furos { [furos.map(&least_tile).map(&:to_i), [0] * (4 - furos.size)].flatten }
+      array_maker = -> furos { [furos.map(&least_tile).map(&:to_mau_i), [0] * (4 - furos.size)].flatten }
 
       mji.minshun = array_maker[chows]
       mji.minkou  = array_maker[pongs]
@@ -339,10 +339,10 @@ module TransMaujong
       mji1.minkan_max  = open_kongs.size
       mji1.ankan_max   = closed_kongs.size
 
-      mji1.tehai = [tehais.map(&:to_i_r), [0] * (14 - mji1.tehai_max)].flatten
+      mji1.tehai = [tehais.map(&:to_mau_i_r), [0] * (14 - mji1.tehai_max)].flatten
 
       least_tile  = -> furo  { furo.pais.min }
-      array_maker = -> furos { [furos.map(&least_tile).map(&:to_i_r), [0] * (4 - furos.size)].flatten }
+      array_maker = -> furos { [furos.map(&least_tile).map(&:to_mau_i_r), [0] * (4 - furos.size)].flatten }
 
       mji1.minshun = array_maker[chows]
       mji1.minkou  = array_maker[pongs]
@@ -350,7 +350,7 @@ module TransMaujong
       mji1.ankan   = array_maker[closed_kongs]
 
       sort_tile = -> furo { furo.pais.sort }
-      maker = -> furos, n { [furos.map(&sort_tile).map(&:to_i_r), [[0] * n] * (4 - furos.size)].reject {|e| e == [] }.transpose.flatten(1) }
+      maker = -> furos, n { [furos.map(&sort_tile).map(&:to_mau_i_r), [[0] * n] * (4 - furos.size)].reject {|e| e == [] }.transpose.flatten(1) }
  
       minshun = maker[chows, 3]
       minkou  = maker[pongs, 3] 
@@ -401,7 +401,7 @@ module TransMaujong
           STD.memmove(mjitehai.to_ptr, p1, Fiddle::Importer.sizeof(mjitehai))
 
           hais = mjitehai.tehai.map do
-           |pai| WrapperPlayer.vaild_tile_number?(pai, @struct_type) ? Mjai::Pai.from_i(pai) : nil
+           |pai| WrapperPlayer.vaild_tile_number?(pai, @struct_type) ? Mjai::Pai.from_mau_i(pai) : nil
           end
 
           hais.compact[0...mjitehai.tehai_max]
@@ -423,7 +423,7 @@ module TransMaujong
         waited = ta.waited_pais
 
         waited.each do |pai|
-          result[Fiddle::SIZEOF_INT * pai.to_i] = pai.to_i
+          result[Fiddle::SIZEOF_INT * pai.to_mau_i] = pai.to_mau_i
         end
       end
 
@@ -433,12 +433,12 @@ module TransMaujong
     end
 
     def on_get_visible_hais(p1, p2)
-      visibles = self.game.players.map { |player| player.sutehais.map(&:to_i) } .flatten
+      visibles = self.game.players.map { |player| player.sutehais.map(&:to_mau_i) } .flatten
       return visibles.count(p1)
     end
 
     def on_get_dora(p1, p2)
-      doras = self.game.dora_markers.map { |dora_marker| dora_marker.succ.to_i }
+      doras = self.game.dora_markers.map { |dora_marker| dora_marker.succ.to_mau_i }
 
       result = Fiddle::Pointer.malloc(Fiddle::SIZEOF_INT * 5)
 
@@ -460,7 +460,7 @@ module TransMaujong
 
       target_ho.each_with_index do |pai, i|
         break if i >= result_size
-        result[Fiddle::SIZEOF_INT * i] = pai.to_i
+        result[Fiddle::SIZEOF_INT * i] = pai.to_mau_i
       end
 
       STD.memmove(p2, result, Fiddle::SIZEOF_INT * result_size)
@@ -487,7 +487,7 @@ module TransMaujong
       target_sutehais.each_with_index do |pai, i|
         break if i >= result_size
 
-        hai = pai.to_i
+        hai = pai.to_mau_i
         state = 0
         state |= MJKS::REACH if reached_tile_index && reached_tile_index == i
         state |= MJKS::NAKI  unless target_ho.include?(pai)
@@ -517,7 +517,7 @@ module TransMaujong
     end
 
     def on_ankan_ability(p1, p2)
-      kanlist = self.possible_furo_actions.select{ |f| [:ankan, :kakan].include?(f.type) }.map{ |f| f.consumed[0].to_i }
+      kanlist = self.possible_furo_actions.select{ |f| [:ankan, :kakan].include?(f.type) }.map{ |f| f.consumed[0].to_mau_i }
       
       if ( kanlist.size == 0 ) then
         return 0
@@ -531,11 +531,11 @@ module TransMaujong
       mji = M::MJITehai.malloc
       STD.memmove(mji.to_ptr, pointer, Fiddle::Importer.sizeof(mji))
 
-      hand = mji.tehai[0...mji.tehai_max].map { |pai| Mjai::Pai.from_i(pai) }
+      hand = mji.tehai[0...mji.tehai_max].map { |pai| Mjai::Pai.from_mau_i(pai) }
 
       transform = -> arr, n, type do
         n > 0 ? nil : arr[0...n].map do
-          |pai| Mjai::Furo.from_i(pai, type)
+          |pai| Mjai::Furo.from_mau_pair(pai, type)
         end
       end
 
@@ -552,7 +552,7 @@ module TransMaujong
     end
 
     def on_get_agari_ten(p1, p2)
-      agari_hai = Mjai::Pai.from_i(p2)
+      agari_hai = Mjai::Pai.from_mau_i(p2)
 
       target_pais = []
       target_furos = []
@@ -599,8 +599,8 @@ module TransMaujong
       
       @tehais_contain_tsumo = true
 
-      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, action.pai.to_i, 0)
-      puts "Draw (%d, %d) res = %d" % [action.pai.to_i, 0, res]
+      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, action.pai.to_mau_i, 0)
+      puts "Draw (%d, %d) res = %d" % [action.pai.to_mau_i, 0, res]
       p self.tehais
       
 
@@ -632,7 +632,7 @@ module TransMaujong
           end
 
         when MJPIR::KAN then
-          tile_in_quad = Mjai::Pai.from_i(orig_tile_ind).remove_red()
+          tile_in_quad = Mjai::Pai.from_mau_i(orig_tile_ind).remove_red()
           
           puts "MJPIR::KAN tile_in_quad"
           p tile_in_quad
@@ -697,8 +697,8 @@ module TransMaujong
       actor_seat  = relative_seat_pos(action.actor.id,  self.id)
       target_seat = relative_seat_pos(action.target.id, self.id)
 
-      melded   = action.pai.to_i
-      consumed = action.consumed.map(&:to_i).sort
+      melded   = action.pai.to_mau_i
+      consumed = action.consumed.map(&:to_mau_i).sort
 
       chow_flag = 0
 
@@ -719,7 +719,7 @@ module TransMaujong
       actor_seat  = relative_seat_pos(action.actor.id,  self.id)
       target_seat = relative_seat_pos(action.target.id, self.id)
 
-      M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), MJPIR::PON | action.pai.to_i)
+      M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), MJPIR::PON | action.pai.to_mau_i)
 
       return action_after_meld(action)
     end
@@ -749,7 +749,7 @@ module TransMaujong
 #          self.possible_actions.select { |a| a.type == :hora } .first
 #
 #        when MJPIR::KAN     then
-#          self.possible_furo_actions.select { |f| f.type == :kan && f.consumed.include?(Mjai::Pai.from_i(tile_id)) } .first
+#          self.possible_furo_actions.select { |f| f.type == :kan && f.consumed.include?(Mjai::Pai.from_mau_i(tile_id)) } .first
 #
         else
           raise(ArgumentError, "invalid action after meld: res = 0x%x" % res)
@@ -769,7 +769,7 @@ module TransMaujong
 
       type = (action.type == :ankan) ? MJPIR::ANKAN : MJPIR::MINKAN
       
-      pai_id = action.consumed[0].to_i
+      pai_id = action.consumed[0].to_mau_i
 
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), type | pai_id)
       puts "Kan (%d, %d) res = %d" % [make_lparam(target_seat, actor_seat), type | pai_id, res]
@@ -800,8 +800,8 @@ module TransMaujong
 
       occured = (prev.type == :reach) ? MJPIR::REACH : MJPIR::SUTEHAI
 
-      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(actor_seat, actor_seat), occured | action.pai.to_i)
-      puts "Discard(%d, %d) res = %d" % [make_lparam(actor_seat, actor_seat), occured | action.pai.to_i, res]
+      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(actor_seat, actor_seat), occured | action.pai.to_mau_i)
+      puts "Discard(%d, %d) res = %d" % [make_lparam(actor_seat, actor_seat), occured | action.pai.to_mau_i, res]
 
       return nil if res == 0 || res == MJR::NOTCARED
 
@@ -867,7 +867,7 @@ module TransMaujong
       actor_seat  = relative_seat_pos(action.actor.id,  self.id)
       target_seat = relative_seat_pos(action.target.id, self.id)
 
-      occured = (actor_seat == target_seat) ? MJPIR::TSUMO : MJPIR::RON | action.pai.to_i
+      occured = (actor_seat == target_seat) ? MJPIR::TSUMO : MJPIR::RON | action.pai.to_mau_i
 
       M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), occured)
 
