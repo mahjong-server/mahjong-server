@@ -147,6 +147,7 @@ module TransMaujong
         when :pon                       then on_pong(action)
         when :ankan, :daiminkan, :kakan then on_kong(action)
         when :dahai                     then on_discard(action)
+        when :ryukyoku                  then on_ryukyoku(action)
         when :hora                      then on_hora(action)
         else                                 nil
         end
@@ -849,6 +850,17 @@ module TransMaujong
 
         chis.sort_by! { |f| [f.pai, f.consumed].flatten.count { |pai| pai.red? } }
         (prefer_aka5) ? chis.first : chis.last
+    end
+    
+    def on_ryukyoku(action)
+      if action.reason != :kyushukyuhai then
+        return nil
+      end
+      
+      actor_seat  = relative_seat_pos(action.actor.id,  self.id)
+      M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(0, actor_seat), MJPIR::NAGASHI)
+      
+      return nil
     end
 
     def on_hora(action)
