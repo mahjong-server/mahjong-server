@@ -669,7 +669,7 @@ module TransMaujong
       @tehais_contain_tsumo = false
       
       if response == nil then
-        raise Mjai::GameFailError.new("Unexpected MJPI::SUTEHAI result %d" % res, self.id, action.to_s, nil)
+        raise Mjai::GameFailError.new("Unexpected MJPI::SUTEHAI result 0x%x" % res, self.id, action.to_s, nil)
       end
       
       if !(defined? resonse.log) then
@@ -727,11 +727,11 @@ module TransMaujong
     def action_after_meld(action)
       return nil if action.actor != self
 
-      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, 0xff, 0)
+      res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, 0x3f, 0)
       puts "After (%d, %d) res = %d" % [0xff, 0, res]
       
       if res == MJR::NOTCARED then
-        return create_action({:type => :dahai, :pai => self.possible_dahais[-1], :tsumogiri => false})
+        return create_action({:type => :dahai, :pai => self.possible_dahais[-1], :tsumogiri => false, :log => "mres0x%x" % res})
       end
 
       orig_tile_ind     = res & MJPIR::HAI_MASK
@@ -741,7 +741,7 @@ module TransMaujong
       response =
         case next_action
         when MJPIR::SUTEHAI then
-          create_action({:type => :dahai, :pai => self.tehais[tile_ind], :tsumogiri => false})
+          create_action({:type => :dahai, :pai => self.tehais[tile_ind], :tsumogiri => false, :log => "mres0x%x" % res})
 
 
 # FIXME #
@@ -751,10 +751,8 @@ module TransMaujong
 #        when MJPIR::KAN     then
 #          self.possible_furo_actions.select { |f| f.type == :kan && f.consumed.include?(Mjai::Pai.from_i(tile_id)) } .first
 #
-        when MJPIR::REACH, MJPIR::NAGASHI then
-          raise(ArgumentError, "invalid action after meld")
         else
-          nil
+          raise(ArgumentError, "invalid action after meld: res = 0x%x" % res)
         end
 
       return response
@@ -829,7 +827,7 @@ module TransMaujong
           WrapperPlayer.make_chow(furos, next_action, prefer_aka5)
 
         else
-          nil
+          raise(ArgumentError, "invalid action on_action: res = 0x%x" % res)
 
         end
 
