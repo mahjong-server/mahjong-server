@@ -84,14 +84,12 @@ module TransMaujong
       super()
 
       inst_size = M.MJPInterfaceFunc(nil, MJPI::CREATEINSTANCE, 0, 0)
-      safe_margin = 1 ** 10
-      malloc_size = inst_size + safe_margin
+      safe_margin = 2 ** 10
+      @malloc_size = inst_size + safe_margin
       
-      @instance     = Fiddle.malloc(malloc_size)
-      
-      @instance_ptr = Fiddle::Pointer[@instance]
+      @instance_ptr = Fiddle::Pointer.malloc(@malloc_size)
       # 初期化を忘れるアレなDLLがいるので
-      @instance_ptr[0, malloc_size] = "\0" * malloc_size
+      @instance_ptr[0, @malloc_size] = "\0" * @malloc_size
       
       @struct_type  = 0
 
@@ -113,7 +111,7 @@ module TransMaujong
 
     def self.finalizer
       M.MJPInterfaceFunc(nil, MJPI::DESTROY, 0, 0)
-      Fiddle.free(@instance)
+      Fiddle.free(@instance_ptr)
     end
 
     def relative_seat_pos(target, base)
@@ -274,7 +272,7 @@ module TransMaujong
       puts "]"
     end
 
-    def self.get_mjitehai(tehais_, furos_, contain_tsumo)
+    def self.get_mjitehai(dest_ptr, tehais_, furos_, contain_tsumo)
       tehais, furos = tehais_.dup, furos_.dup
 
       # remove unknown tiles
@@ -290,7 +288,7 @@ module TransMaujong
       open_kongs   = furos.select(&type_selector[:daiminkan])
       closed_kongs = furos.select(&type_selector[:ankan])
 
-      mji = M::MJITehai.malloc
+      mji = M::MJITehai.new(dest_ptr)
 
       mji.tehai_max   = tehais.size
 
@@ -315,7 +313,7 @@ module TransMaujong
       return mji
     end
 
-    def self.get_mjitehai1(tehais_, furos_, contain_tsumo)
+    def self.get_mjitehai1(dest_ptr, tehais_, furos_, contain_tsumo)
       tehais, furos = tehais_.dup, furos_.dup
 
       tehais.reject { |p| p.to_s == "?" }
@@ -330,7 +328,7 @@ module TransMaujong
       open_kongs   = furos.select(&type_selector[:daiminkan])
       closed_kongs = furos.select(&type_selector[:ankan])
 
-      mji1 = M::MJITehai1.malloc
+      mji1 = M::MJITehai1.new(dest_ptr)
       
       mji1.tehai_max   = tehais.size
 
@@ -378,16 +376,11 @@ module TransMaujong
       target_seat   = absolute_seat_pos(p1, self.id)
       target_player = self.game.players[target_seat]
 
-      mjitehai =
-        if @struct_type == 0 then
-          WrapperPlayer.get_mjitehai( target_player.tehais, target_player.furos, @tehais_contain_tsumo)
-        else
-          WrapperPlayer.get_mjitehai1(target_player.tehais, target_player.furos, @tehais_contain_tsumo)
-        end
-
-      STD.memmove(p2, mjitehai, Fiddle::Importer.sizeof(mjitehai))
-
-      Fiddle.free(mjitehai.to_ptr)
+      if @struct_type == 0 then
+        WrapperPlayer.get_mjitehai(p2, target_player.tehais, target_player.furos, @tehais_contain_tsumo)
+      else
+        WrapperPlayer.get_mjitehai1(p2, target_player.tehais, target_player.furos, @tehais_contain_tsumo)
+      end
 
       return 1
     end
@@ -397,8 +390,7 @@ module TransMaujong
         if p1 == 0 then
           self.tehais.dup
         else
-          mjitehai = M::MJITehai.malloc
-          STD.memmove(mjitehai.to_ptr, p1, Fiddle::Importer.sizeof(mjitehai))
+          mjitehai = M::MJITehai.new(p1)
 
           hais = mjitehai.tehai.map do
            |pai| WrapperPlayer.vaild_tile_number?(pai, @struct_type) ? Mjai::Pai.from_mau_i(pai) : nil
@@ -409,7 +401,7 @@ module TransMaujong
 
       hand.pop if hand.size % 3 == 2
 
-      result = Fiddle::Pointer.malloc(Fiddle::SIZEOF_INT * 34)
+      result = Fiddle::Pointer.to_ptr(p2)
 
       for i in 0..33 do
         result[Fiddle::SIZEOF_INT * i] = 0
@@ -427,8 +419,6 @@ module TransMaujong
         end
       end
 
-      STD.memmove(p2, result, Fiddle::SIZEOF_INT * 34)
-
       return (is_tenpai) ? 1 : 0
     end
 
@@ -440,13 +430,11 @@ module TransMaujong
     def on_get_dora(p1, p2)
       doras = self.game.dora_markers.map { |dora_marker| dora_marker.succ.to_mau_i }
 
-      result = Fiddle::Pointer.malloc(Fiddle::SIZEOF_INT * 5)
+      result = Fiddle::Pointer.to_ptr(p1)
 
       doras.each_with_index do |dora, i|
-        result[Fiddle::SIZEOF_LONG_LONG * i] = dora
+        result[Fiddle::SIZEOF_INT * i] = dora
       end
-
-      STD.memmove(p1, result, Fiddle::SIZEOF_INT * 5)
 
       return doras.size
     end
@@ -456,14 +444,12 @@ module TransMaujong
       target_ho = game.players[target_id].ho
 
       result_size = [hiword(p1), target_ho.size].min
-      result = Fiddle::Pointer.malloc(Fiddle::SIZEOF_INT * result_size)
+      result = Fiddle::Pointer.to_ptr(p2)
 
       target_ho.each_with_index do |pai, i|
         break if i >= result_size
         result[Fiddle::SIZEOF_INT * i] = pai.to_mau_i
       end
-
-      STD.memmove(p2, result, Fiddle::SIZEOF_INT * result_size)
 
       return result_size
     end
@@ -476,12 +462,8 @@ module TransMaujong
 
       reached_tile_index = target_player.reach_ho_index
 
-      #kawahai = M::MJIKawahai.malloc
-      #kawahai_size = Fiddle::Importer.sizeof(kawahai)
-
       kawahai_size = 4 #unsigned short * 2
       result_size = [hiword(p1), target_sutehais.size].min
-      #result = Fiddle::Pointer.malloc(kawahai_size * result_size)
       result = []
 
       target_sutehais.each_with_index do |pai, i|
@@ -494,11 +476,8 @@ module TransMaujong
         
         result << hai
         result << state
-
-        #result[kawahai_size * i, kawahai_size] = kawahai.to_str
       end
 
-      #STD.memmove(p2, result, kawahai_size * result_size)
       STD.memmove(p2, result.pack("S*"), kawahai_size * result_size)
 
       return result_size
@@ -528,8 +507,7 @@ module TransMaujong
     end
 
     def self.get_tiles(pointer, struct_type)
-      mji = M::MJITehai.malloc
-      STD.memmove(mji.to_ptr, pointer, Fiddle::Importer.sizeof(mji))
+      mji = M::MJITehai.new(pointer)
 
       hand = mji.tehai[0...mji.tehai_max].map { |pai| Mjai::Pai.from_mau_i(pai) }
 
@@ -545,8 +523,6 @@ module TransMaujong
       closed_kongs = transform.call(mji.ankan, mji.ankan_max, :ankan)
 
       melds = [chows, pongs, open_kongs, closed_kongs].flatten.compact
-
-      Fiddle.free(mji.to_ptr)
 
       return [hand, melds]
     end
