@@ -41,7 +41,7 @@ module Mjai
             do_action({:type => :end_game, :scores => fin_score})
             return fin_score
           rescue GameFailError
-            do_action({:type => :error, :message => "Player" + $!.player.to_s + "'s illegal response: " + $!.message + " - Original Action: " + $!.orig_action + ", Player's Response: " + $!.response})
+            do_action({:type => :error, :message => "Player" + $!.player.to_s + "'s illegal response: " + $!.message + " - Original Action: " + $!.orig_action.to_s + ", Player's Response: " + $!.response.to_s})
             raise $!
           end
         end

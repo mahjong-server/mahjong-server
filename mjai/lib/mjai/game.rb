@@ -67,7 +67,7 @@ module Mjai
           end
 
           action_with_logs = action.merge({:logs => responses.map(){ |r| r && r.log }})
-          responses = responses.map() do |r|
+          responses_with_log = responses.map() do |r|
             if (!r) then
               nil
             elsif ( defined? r.log ) then
@@ -76,7 +76,15 @@ module Mjai
               r.merge({:log => nil})
             end
           end
-          @on_responses.call(action_with_logs, responses) if @on_responses
+          @on_responses.call(action_with_logs, responses_with_log) if @on_responses
+
+          responses = responses.map() do |r|
+            if (!r || r.type == :none ) then
+              nil
+            else
+              r
+            end
+          end
 
           @previous_action = action
           validate_responses(responses, action)
@@ -189,7 +197,7 @@ module Mjai
               validate_response_type(response, @players[i], action)
               validate_response_content(response, action) if response
             rescue ValidationError
-              raise GameFailError.new(response.to_s + ": " + $!.message, i, response.to_s)
+              raise GameFailError.new(response.to_s + ": " + $!.message, i, action, response)
             end
           end
         end
