@@ -171,10 +171,6 @@ module Mjai
           return ShantenAnalysis.new(@tehais, 0).shanten <= 0
         end
         
-        def ryukyoku_tenpai?
-          return TenpaiAnalysis.new(@tehais).ryukyoku_tenpai?
-        end
-        
         def furiten?
           return false if @tehais.size % 3 != 1
           return false if @tehais.include?(Pai::UNKNOWN)

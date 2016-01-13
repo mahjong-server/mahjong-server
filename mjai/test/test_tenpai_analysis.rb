@@ -23,6 +23,12 @@ class TC_TenpaiAnalysis < Test::Unit::TestCase
       
       assert(!TenpaiAnalysis.new(Pai.parse_pais("12m45p789sNNNFFPC")).tenpai?)
       
+      assert(TenpaiAnalysis.new(Pai.parse_pais("2222333344p")).tenpai?)
+      assert(!TenpaiAnalysis.new(Pai.parse_pais("FFFF")).tenpai?)
+      assert(!TenpaiAnalysis.new(Pai.parse_pais("555s5sr")).tenpai?)
+      assert(!TenpaiAnalysis.new(Pai.parse_pais("12m45p789sNNNFFPC")).tenpai?)
+      assert(!TenpaiAnalysis.new(Pai.parse_pais("2m5m3p4p7p4s9s")).tenpai?)
+      
     end
     
     def test_waited_pais()
@@ -50,11 +56,4 @@ class TC_TenpaiAnalysis < Test::Unit::TestCase
           TenpaiAnalysis.new(Pai.parse_pais("19m19s19pESWNPPF")).waited_pais.join(" "))
     end
     
-    def test_ryukyoku_tenpai()
-      assert(true, TenpaiAnalysis.new(Pai.parse_pais("2222333344p")).ryukyoku_tenpai?)
-      assert(!TenpaiAnalysis.new(Pai.parse_pais("FFFF")).ryukyoku_tenpai?)
-      assert(!TenpaiAnalysis.new(Pai.parse_pais("555s5sr")).ryukyoku_tenpai?)
-      assert(!TenpaiAnalysis.new(Pai.parse_pais("12m45p789sNNNFFPC")).ryukyoku_tenpai?)
-      assert(!TenpaiAnalysis.new(Pai.parse_pais("2m5m3p4p7p4s9s")).ryukyoku_tenpai?)
-    end
 end

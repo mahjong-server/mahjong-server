@@ -292,7 +292,7 @@ module Mjai
               end
             end
             
-            if player.ryukyoku_tenpai?
+            if player.tenpai?
               tenpais.push(true)
               tehais.push(player.tehais)
             else
