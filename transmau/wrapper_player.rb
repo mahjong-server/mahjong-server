@@ -106,7 +106,10 @@ module TransMaujong
         raise "Initialization of plugin failed"
       end
 
-      @name = "cheat_" + Fiddle::Pointer[M.MJPInterfaceFunc(nil, MJPI::YOURNAME, 0, 0)].to_s.encode("UTF-8", "Shift_JIS")
+      @name = 
+        #"cheat_" + 
+        "dll_" + 
+        Fiddle::Pointer[M.MJPInterfaceFunc(nil, MJPI::YOURNAME, 0, 0)].to_s.encode("UTF-8", "Shift_JIS")
     end
 
     def self.finalizer
