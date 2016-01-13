@@ -404,11 +404,7 @@ module TransMaujong
 
       hand.pop if hand.size % 3 == 2
 
-      result = Fiddle::Pointer.to_ptr(p2)
-
-      for i in 0..33 do
-        result[Fiddle::SIZEOF_INT * i] = 0
-      end
+      result = [0]*34
 
       ta = Mjai::TenpaiAnalysis.new(hand)
 
@@ -418,9 +414,11 @@ module TransMaujong
         waited = ta.waited_pais
 
         waited.each do |pai|
-          result[Fiddle::SIZEOF_INT * pai.to_mau_i] = pai.to_mau_i
+          result[pai.to_mau_i] = 1
         end
       end
+      
+      STD.memmove(p2, result.pack("V*"), Fiddle::SIZEOF_INT * 34)
 
       return (is_tenpai) ? 1 : 0
     end
@@ -432,12 +430,7 @@ module TransMaujong
 
     def on_get_dora(p1, p2)
       doras = self.game.dora_markers.map { |dora_marker| dora_marker.succ.to_mau_i }
-
-      result = Fiddle::Pointer.to_ptr(p1)
-
-      doras.each_with_index do |dora, i|
-        result[Fiddle::SIZEOF_INT * i] = dora
-      end
+      STD.memmove(p1, doras.pack("V*"), Fiddle::SIZEOF_INT * doras.size)
 
       return doras.size
     end
@@ -447,12 +440,7 @@ module TransMaujong
       target_ho = game.players[target_id].ho
 
       result_size = [hiword(p1), target_ho.size].min
-      result = Fiddle::Pointer.to_ptr(p2)
-
-      target_ho.each_with_index do |pai, i|
-        break if i >= result_size
-        result[Fiddle::SIZEOF_INT * i] = pai.to_mau_i
-      end
+      STD.memmove(p2, target_ho.map(&:to_mau_i).pack("V*"), Fiddle::SIZEOF_INT * result_size)
 
       return result_size
     end
@@ -481,7 +469,7 @@ module TransMaujong
         result << state
       end
 
-      STD.memmove(p2, result.pack("S*"), kawahai_size * result_size)
+      STD.memmove(p2, result.pack("v*"), kawahai_size * result_size)
 
       return result_size
     end
@@ -505,7 +493,7 @@ module TransMaujong
         return 0
       end
       
-      STD.memmove(p1, result.pack("S*"), 2 * kanlist.size)
+      STD.memmove(p1, result.pack("v*"), 2 * kanlist.size)
       return kanlist.size
     end
 
