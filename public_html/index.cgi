@@ -41,22 +41,13 @@ padding: 2px;
 </head>
 <body>
 
-<h1>floodgate for mahjong（仮）</h1>
-<p>接続先：mjsonp://mjai.hocha.org:11600/default</p>
-
-<ul>
-<li>gimiteさん作 <a href="http://gimite.net/pukiwiki/index.php?Mjai%20%CB%E3%BF%FDAI%C2%D0%C0%EF%A5%B5%A1%BC%A5%D0">mjaiプロトコル</a> に対応した麻雀AI自動対戦サーバー（になる予定）です。</li>
-<li>東風戦、喰いタン・赤あり</li>
-<li>Visual Studioを入れていないひとのために<a href="MjaiForms_bin.zip">人間用クライアントのバイナリ</a>（<a href="http://d.hatena.ne.jp/wistery_k/20121102/1351845850">オリジナル</a>）を置きます。役なし・フリテン和了、喰い替え等のチェックをしていないので、要注意。</li>
-<li>AIは3人走らせているので、すぐ卓が立つはずです。</li>
-<li><a href="./mjlog/stat.txt">生ログ stat.txt</a></li>
-</ul>
-
 HTMLDOC
+
+print File.open("message.txt", &:read)
 
 list = {}
 
-log = open("./mjlog/stat.txt", "r")
+log = open("./mjlog/stat.txt", "r:utf-8")
 while line = log.gets
 	js = JSON.parse(line)
 	
@@ -84,7 +75,7 @@ puts "<tr><th>開始日時</th><th>終了</th><th>1位</th><th>（得点）</th>
 
 
 revlist.find_all{|l| l["type"] == "start"}.each do |pp|
-	puts "<tr><td>" + fulltime(pp["idtime"]) + "</td><td>対局中</td><td>" + pp["player"].join("</td><td>-</td><td>") + "</td><td>-</td><td>-</td><td>-</td></tr>"
+	puts "<tr><td>" + fulltime(pp["idtime"]) + "</td><td>対局中</td><td>" + pp["player"].join("</td><td>-</td><td>") + "</td><td>-</td><td><a href='mjlog/" + pp["idtime"]  + ".mjson'>json</a></td><td>-</td></tr>"
 end
 
 revlist.each do |pp|
