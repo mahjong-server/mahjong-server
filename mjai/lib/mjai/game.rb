@@ -189,7 +189,7 @@ module Mjai
               validate_response_type(response, @players[i], action)
               validate_response_content(response, action) if response
             rescue ValidationError
-              raise GameFailError.new($!.message, i, action.to_s, response.to_s)
+              raise GameFailError.new(response.to_s + ": " + $!.message, i, response.to_s)
             end
           end
         end
