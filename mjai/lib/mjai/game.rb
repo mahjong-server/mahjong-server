@@ -210,7 +210,7 @@ module Mjai
           end
           
           if response && response.type == :error
-            raise(ValidationError, response.message)
+            raise GameFailError.new("(Error Returned) " + response.message.to_s, player.id, action, orig_response)
           end
           is_actor = player == action.actor
           if expect_response_from?(player)

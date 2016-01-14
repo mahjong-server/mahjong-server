@@ -89,7 +89,7 @@ def play_game(clients)
 		
 		log_out.printf("GameFailError " + $!.player.to_s + " " + Time.now.strftime("%Y-%m-%d-%H%M%S") + " " + $!.message.to_s + "\n")
 		
-		STDERR.puts ("player " + $!.player.to_s + " " + $!.response)
+		STDERR.puts ("player " + $!.player.to_s + " " + $!.response.to_s)
 		print_backtrace($!, log_out)
 	rescue
 		# error log
