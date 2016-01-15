@@ -180,7 +180,7 @@ module Mjai
         end
         
         def tenpai?
-          return ShantenAnalysis.new(@tehais, 0).shanten <= 0
+          return TenpaiAnalysis.new(@tehais).tenpai?
         end
         
         def furiten?
