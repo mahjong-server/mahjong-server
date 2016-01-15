@@ -88,6 +88,10 @@ module Mjai
                @game.previous_action.type == :kakan
                  @ippatsu_chance = false
               end
+            when :ryukyoku
+              if action.tehais[self.id][0].type != nil
+                @tehais = action.tehais[self.id]
+              end
           end
           
           if action.actor == self
@@ -143,6 +147,13 @@ module Mjai
                 @reach_state = :accepted
                 @reach_ho_index = @ho.size - 1
                 @ippatsu_chance = true
+              when :hora
+                hora_type = action.actor == action.target ? :tsumo : :ron
+                if hora_type == :tsumo
+                  @tehais = action.hora_tehais.dup + [action.pai]
+                else
+                  @tehais = action.hora_tehais.dup
+                end
             end
           end
           
