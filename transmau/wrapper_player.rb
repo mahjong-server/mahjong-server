@@ -11,6 +11,9 @@ require './bit_operation.rb'
 
 module TransMaujong
   VERSION = 12
+  
+  
+  PADDING_NUM = 0
 
   class WrapperPlayer < Mjai::Player
     include BitOperation
@@ -54,10 +57,10 @@ module TransMaujong
         "#{UINT_STRING} ankan[4]",
         "#{UINT_STRING} ankan_max",
 
-        "#{UINT_STRING} minshun_hai[3][4]",
-        "#{UINT_STRING} minkou_hai[3][4]",
-        "#{UINT_STRING} minkan_hai[4][4]",
-        "#{UINT_STRING} ankan_hai[4][4]",
+        "#{UINT_STRING} minshun_hai[12]",
+        "#{UINT_STRING} minkou_hai[12]",
+        "#{UINT_STRING} minkan_hai[16]",
+        "#{UINT_STRING} ankan_hai[16]",
 
         "#{UINT_STRING} reserved1",
         "#{UINT_STRING} reserved2"
@@ -88,7 +91,7 @@ module TransMaujong
       @malloc_size = inst_size + safe_margin
       
       @instance_ptr = Fiddle::Pointer.malloc(@malloc_size)
-      # 初期化を忘れるアレなDLLがいるので
+      # いちおう初期化
       @instance_ptr[0, @malloc_size] = "\0" * @malloc_size
       
       @struct_type  = 0
@@ -210,7 +213,7 @@ module TransMaujong
     def on_last_tsumogiri(p1, p2)
       prev = self.game.previous_action
 
-      return (prev.tsumogiri) ? 1 : 0
+      return (@last_is_tsumogiri) ? 1 : 0
     end
 
     def on_get_rule(p1, p2)
@@ -284,12 +287,10 @@ module TransMaujong
       # remove the tile just drawn in this turn
       tehais.pop if contain_tsumo
 
-      type_selector = -> sym, elem { elem.type == sym } .curry
-
-      chows        = furos.select(&type_selector[:minshun])
-      pongs        = furos.select(&type_selector[:minkou])
-      open_kongs   = furos.select(&type_selector[:daiminkan])
-      closed_kongs = furos.select(&type_selector[:ankan])
+      chows        = furos.select{ |f| f.type == :chi }
+      pongs        = furos.select{ |f| f.type == :pon }
+      open_kongs   = furos.select{ |f| f.type == :daiminkan || f.type == :kakan }
+      closed_kongs = furos.select{ |f| f.type == :ankan }
 
       mji = M::MJITehai.new(dest_ptr)
 
@@ -300,10 +301,10 @@ module TransMaujong
       mji.minkan_max  = open_kongs.size
       mji.ankan_max   = closed_kongs.size
 
-      mji.tehai = [tehais.map(&:to_mau_i), [0] * (14 - mji.tehai_max)].flatten
+      mji.tehai = [tehais.map(&:to_mau_i), [PADDING_NUM] * (14 - mji.tehai_max)].flatten
 
       least_tile  = -> furo  { furo.pais.flatten.min }
-      array_maker = -> furos { [furos.map(&least_tile).map(&:to_mau_i), [0] * (4 - furos.size)].flatten }
+      array_maker = -> furos { [furos.map(&least_tile).map(&:to_mau_i), [PADDING_NUM] * (4 - furos.size)].flatten }
 
       mji.minshun = array_maker[chows]
       mji.minkou  = array_maker[pongs]
@@ -311,7 +312,6 @@ module TransMaujong
       mji.ankan   = array_maker[closed_kongs]
       
       puts "get_mjitehai (%d)" % mji.tehai_max
-      p mji.tehai
 
       return mji
     end
@@ -319,17 +319,15 @@ module TransMaujong
     def self.get_mjitehai1(dest_ptr, tehais_, furos_, contain_tsumo)
       tehais, furos = tehais_.dup, furos_.dup
 
-      tehais.reject { |p| p.to_s == "?" }
+      tehais.reject! { |p| p.to_s == "?" }
       
       # remove the tile just drawn in this turn
       tehais.pop if contain_tsumo
 
-      type_selector = -> sym, elem { elem.type == sym } .curry
-
-      chows        = furos.select(&type_selector[:minshun])
-      pongs        = furos.select(&type_selector[:minkou])
-      open_kongs   = furos.select(&type_selector[:daiminkan])
-      closed_kongs = furos.select(&type_selector[:ankan])
+      chows        = furos.select{ |f| f.type == :chi }
+      pongs        = furos.select{ |f| f.type == :pon }
+      open_kongs   = furos.select{ |f| f.type == :daiminkan || f.type == :kakan }
+      closed_kongs = furos.select{ |f| f.type == :ankan }
 
       mji1 = M::MJITehai1.new(dest_ptr)
       
@@ -340,37 +338,50 @@ module TransMaujong
       mji1.minkan_max  = open_kongs.size
       mji1.ankan_max   = closed_kongs.size
 
-      mji1.tehai = [tehais.map(&:to_mau_i_r), [0] * (14 - mji1.tehai_max)].flatten
+      mji1.tehai = [tehais.map(&:to_mau_i_r), [PADDING_NUM] * (14 - mji1.tehai_max)].flatten
 
       least_tile  = -> furo  { furo.pais.min }
-      array_maker = -> furos { [furos.map(&least_tile).map(&:to_mau_i_r), [0] * (4 - furos.size)].flatten }
+      # minshun 等には赤なしの番号でよい（らしい）
+      array_maker = -> furos { [furos.map(&least_tile).map(&:to_mau_i), [PADDING_NUM] * (4 - furos.size)].flatten }
 
       mji1.minshun = array_maker[chows]
       mji1.minkou  = array_maker[pongs]
       mji1.minkan  = array_maker[open_kongs]
       mji1.ankan   = array_maker[closed_kongs]
-
-      sort_tile = -> furo { furo.pais.sort }
-      maker = -> furos, n { [furos.map(&sort_tile).map(&:to_mau_i_r), [[0] * n] * (4 - furos.size)].reject {|e| e == [] }.transpose.flatten(1) }
- 
-      minshun = maker[chows, 3]
-      minkou  = maker[pongs, 3] 
-
-      for i in 0..2 do
-      	mji1.minshun_hai[i] = minshun[i]
-      	mji1.minkou_hai[i]  = minkou
-      end
-
-      minkan = maker[open_kongs, 4]
-      ankan  = maker[closed_kongs, 4]
-
-      for i in 0..3 do
-      	mji1.minkan_hai[i] = minkan[i]
-      	mji1.ankan_hai[i]  = ankan[i]
-      end
       
-      puts "get_mjitehai1"
-      pp mji1
+      r_ch = [PADDING_NUM]*12
+      chows.size.times { |i|
+        r_ch[0*4 +i] = chows[i].taken.to_mau_i_r
+        r_ch[1*4 +i] = chows[i].consumed[0].to_mau_i_r
+        r_ch[2*4 +i] = chows[i].consumed[1].to_mau_i_r
+      }
+      mji1.minshun_hai = r_ch
+      
+      r_po = [PADDING_NUM]*12
+      pongs.size.times { |i|
+        r_po[0*4 +i] = pongs[i].taken.to_mau_i_r
+        r_po[1*4 +i] = pongs[i].consumed[0].to_mau_i_r
+        r_po[2*4 +i] = pongs[i].consumed[1].to_mau_i_r
+      }
+      mji1.minkou_hai = r_po
+      
+      r_oko = [PADDING_NUM]*16
+      open_kongs.size.times { |i|
+        r_oko[0*4 +i] = open_kongs[i].taken.to_mau_i_r
+        r_oko[1*4 +i] = open_kongs[i].consumed[0].to_mau_i_r
+        r_oko[2*4 +i] = open_kongs[i].consumed[1].to_mau_i_r
+        r_oko[3*4 +i] = open_kongs[i].consumed[2].to_mau_i_r
+      }
+      mji1.minkan_hai = r_oko
+      
+      r_cko = [PADDING_NUM]*16
+      closed_kongs.size.times { |i|
+        for pj in 0..3 do
+          r_cko[pj*4 +i] = closed_kongs[i].consumed[pj].to_mau_i_r
+        end
+      }
+      mji1.ankan_hai = r_cko
+      
 
       return mji1
     end
@@ -381,8 +392,10 @@ module TransMaujong
 
       if @struct_type == 0 then
         WrapperPlayer.get_mjitehai(p2, target_player.tehais, target_player.furos, @tehais_contain_tsumo)
-      else
+      elsif @struct_type == 1 then
         WrapperPlayer.get_mjitehai1(p2, target_player.tehais, target_player.furos, @tehais_contain_tsumo)
+      else
+        throw "Unknown struct_type " + @struct_type.to_s
       end
 
       return 1
@@ -393,19 +406,18 @@ module TransMaujong
         if p1 == 0 then
           self.tehais.dup
         else
-          mjitehai = M::MJITehai.new(p1)
-
-          hais = mjitehai.tehai.map do
-           |pai| WrapperPlayer.vaild_tile_number?(pai, @struct_type) ? Mjai::Pai.from_mau_i(pai) : nil
-          end
-
-          hais.compact[0...mjitehai.tehai_max]
+          target_pais, target_furos = WrapperPlayer.get_tiles(p1, @struct_type)
+          target_pais
         end
-
-      hand.pop if hand.size % 3 == 2
 
       result = [0]*34
 
+      hand.pop if hand.size % 3 == 2
+      if hand.size % 3 != 1
+        pp hand
+        throw "get_machi hand is not 3n+1"
+      end
+      
       ta = Mjai::TenpaiAnalysis.new(hand)
 
       is_tenpai = ta.tenpai?
@@ -498,23 +510,76 @@ module TransMaujong
     end
 
     def self.get_tiles(pointer, struct_type)
-      mji = M::MJITehai.new(pointer)
-
-      hand = mji.tehai[0...mji.tehai_max].map { |pai| Mjai::Pai.from_mau_i(pai) }
-
-      transform = -> arr, n, type do
-        n > 0 ? nil : arr[0...n].map do
-          |pai| Mjai::Furo.from_mau_pair(pai, type)
-        end
+      
+      mji = nil
+      melds = []
+      
+      if struct_type == 0
+        mji = M::MJITehai.new(pointer)
+        
+        mji.minshun_max.times { |i|
+          taken = Mjai::Pai.from_mau_i( mji.minshun[i] )
+          melds << Mjai::Furo.new({:type => :chi, :taken => taken, :consumed => [taken.succ, taken.succ.succ] })
+        }
+        mji.minkou_max.times { |i|
+          taken = Mjai::Pai.from_mau_i( mji.minkou[i] )
+          melds << Mjai::Furo.new({:type => :pon, :taken => taken, :consumed => [taken]*2 })
+        }
+        mji.minkan_max.times { |i|
+          taken = Mjai::Pai.from_mau_i( mji.minkan[i] )
+          melds << Mjai::Furo.new({:type => :kakan, :taken => taken, :consumed => [taken]*3 })
+        }
+        mji.ankan_max.times { |i|
+          taken = Mjai::Pai.from_mau_i( mji.ankan[i] )
+          melds << Mjai::Furo.new({:type => :ankan, :consumed => [taken]*4 })
+        }
+        
+      elsif struct_type == 1
+      
+        mji = M::MJITehai1.new(pointer)
+        hand = mji.tehai[0...mji.tehai_max].map { |pai| Mjai::Pai.from_mau_i(pai) }
+        
+        
+        mji.minshun_max.times { |i|
+          taken = Mjai::Pai.from_mau_i( mji.minshun_hai[0*4 +i] )
+          consumed = [1,2].map{ |pn| Mjai::Pai.from_mau_i( mji.minshun_hai[pn*4 +i] ) }
+          melds << Mjai::Furo.new({:type => :chi, :taken => taken, :consumed => consumed })
+        }
+        mji.minkou_max.times { |i|
+          taken = Mjai::Pai.from_mau_i( mji.minkou_hai[0*4 +i] )
+          consumed = [1,2].map{ |pn| Mjai::Pai.from_mau_i( mji.minkou_hai[pn*4 +i] ) }
+          melds << Mjai::Furo.new({:type => :pon, :taken => taken, :consumed => consumed })
+        }
+        mji.minkan_max.times { |i|
+          taken = Mjai::Pai.from_mau_i( mji.minkan_hai[0*4 +i] )
+          consumed = [1,2,3].map{ |pn| Mjai::Pai.from_mau_i( mji.minkan_hai[pn*4 +i] ) }
+          melds << Mjai::Furo.new({:type => :kakan, :taken => taken, :consumed => consumed })
+        }
+        mji.ankan_max.times { |i|
+          consumed = [0,1,2,3].map{ |pn| Mjai::Pai.from_mau_i( mji.minkan_hai[pn*4 +i] ) }
+          melds << Mjai::Furo.new({:type => :ankan, :consumed => consumed })
+        }
+        
+        
+      else
+        throw "Unknown struct_type " + struct_type.to_s
       end
-
-      chows        = transform.call(mji.minshun, mji.minshun_max, :minshun)
-      pongs        = transform.call(mji.minkou, mji.minkou_max, :minkou)
-      open_kongs   = transform.call(mji.minkan, mji.minkan_max, :minkan)
-      closed_kongs = transform.call(mji.ankan, mji.ankan_max, :ankan)
-
-      melds = [chows, pongs, open_kongs, closed_kongs].flatten.compact
-
+      
+      
+      hand = []
+      mji.tehai[0...mji.tehai_max].each { |pai|
+        if WrapperPlayer.vaild_tile_number?(pai, struct_type)
+          hand << Mjai::Pai.from_mau_i(pai)
+        else
+          #アカギがこういうことをしているし、まうじゃんもこれで動作しているので
+        end
+      }
+      
+      
+      p "get_tiles (structtype " + struct_type.to_s + ")"
+      pp hand
+      pp melds
+      
       return [hand, melds]
     end
 
@@ -531,8 +596,13 @@ module TransMaujong
         target_pais, target_furos = WrapperPlayer.get_tiles(p1, @struct_type)
       end
 
-      target_pais.pop if target_pais.size % 3 == 2
-
+      if target_pais.size % 3 == 2
+        target_pais.pop
+      end
+      if target_pais.size % 3 != 1
+        pp target_pais
+        throw "on_get_agari_ten hand is not 3n+1"
+      end
       
       if Mjai::ShantenAnalysis.new(target_pais + [agari_hai], -1).shanten > -1
         return 0
@@ -549,11 +619,13 @@ module TransMaujong
         :doras        => self.game.doras,
         :reach        => self.reach?,
         :double_reach => self.double_reach?,
-        :hora_type    => :ron,
-
-        # hands based on luck are ignored
-        :uradoras => [], :ippatsu => false, :rinshan => false,
-        :haitei => false, :first_turn => false, :chankan => false
+        :hora_type    => @tehais_contain_tsumo ? :tsumo : :ron,
+        :uradoras     => [],
+        :ippatsu      => self.ippatsu_chance?,
+        :rinshan      => self.rinshan?,
+        :haitei       => (self.game.num_pipais == 0 && !self.rinshan?),
+        :first_turn   => self.game.first_turn?,
+        :chankan      => self.game.previous_action ? self.game.previous_action.type == :kakan : false
       })
 
       return (hora.valid?) ? hora.points : 0
@@ -667,17 +739,21 @@ module TransMaujong
       melded   = action.pai.to_mau_i
       consumed = action.consumed.map(&:to_mau_i).sort
 
-      chow_flag = 0
+      chi_flag = 0
 
       if melded < consumed.min then
         chi_flag = MJPIR::CHII1
       elsif melded > consumed.max then
-        chi_flag = MJPIR::CHII3
-      else
         chi_flag = MJPIR::CHII2
+      else
+        chi_flag = MJPIR::CHII3
       end
+      
+      melded   = action.pai.to_mau_i_r if @struct_type == 1
 
       M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), chi_flag | melded)
+      p "on_chow"
+      p "send onaction 0x%x 0x%x" % [ ( make_lparam(target_seat, actor_seat)), chi_flag | melded]
 
       return action_after_meld(action)
     end
@@ -685,8 +761,11 @@ module TransMaujong
     def on_pong(action)
       actor_seat  = relative_seat_pos(action.actor.id,  self.id)
       target_seat = relative_seat_pos(action.target.id, self.id)
+      
+      melded   = action.pai.to_mau_i
+      melded   = action.pai.to_mau_i_r if @struct_type == 1
 
-      M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), MJPIR::PON | action.pai.to_mau_i)
+      M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(target_seat, actor_seat), MJPIR::PON | melded)
 
       return action_after_meld(action)
     end
@@ -695,7 +774,7 @@ module TransMaujong
       return nil if action.actor != self
 
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::SUTEHAI, 0x3f, 0)
-      puts "After (%d, %d) res = %d" % [0xff, 0, res]
+      puts "After (%d, %d) res = %d" % [0x3f, 0, res]
       
       if res == MJR::NOTCARED then
         return create_action({:type => :dahai, :pai => self.possible_dahais[-1], :tsumogiri => false, :log => "mres0x%x" % res})
@@ -750,7 +829,7 @@ module TransMaujong
         act = self.possible_actions.select { |a| a.type == :hora } .first
         
         if act == nil then
-          raise Mjai::GameFailError.new("Unexpected MJPI::ONACTION (Chankan) result %d" % res, self.id, action.to_s, nil)
+          raise Mjai::GameFailError.new("Unexpected MJPI::ONACTION (Chankan) result 0x%x" % res, self.id, action.to_s, nil)
         end
         
         return act.merge({:log => "Chankan res = 0x%x" % res})
@@ -766,6 +845,8 @@ module TransMaujong
       prev = self.game.previous_action
 
       occured = (prev.type == :reach) ? MJPIR::REACH : MJPIR::SUTEHAI
+      
+      @last_is_tsumogiri = action.tsumogiri
 
       res = M.MJPInterfaceFunc(@instance_ptr, MJPI::ONACTION, make_lparam(actor_seat, actor_seat), occured | action.pai.to_mau_i)
       puts "Discard(%d, %d) res = %d" % [make_lparam(actor_seat, actor_seat), occured | action.pai.to_mau_i, res]
@@ -776,12 +857,12 @@ module TransMaujong
       prefer_aka5  = no_aka5_flag == 0
       next_action  = res - no_aka5_flag
 
-      furos = self.possible_furo_actions
+      furos = self.possible_actions
 
       response =
         case next_action
         when MJPIR::RON
-          furos.select { |f| f.type == :ron } .first
+          furos.select { |f| f.type == :hora } .first
 
         when MJPIR::KAN
           furos.select { |f| f.type == :daiminkan } .first
@@ -800,7 +881,11 @@ module TransMaujong
 
         end
 
-      response = (response == nil) ? nil : response.merge({:log => "ares0x%x" % res})
+      if !response
+        raise Mjai::GameFailError.new("Unexpected MJPI::ONACTION (Discard) result 0x%x" % res, self.id, action.to_s, nil)
+      end
+      
+      response = response.merge({:log => "ares0x%x" % res})
       return response
     end
 
@@ -811,8 +896,10 @@ module TransMaujong
           chis = possible_furos.select { |f| f.type == :chi && f.pai < f.consumed.min }
         elsif chow_flag == MJPIR::CHII2 then
           chis = possible_furos.select { |f| f.type == :chi && f.pai > f.consumed.max }
+        elsif chow_flag == MJPIR::CHII3 then
+          chis = possible_furos.select { |f| f.type == :chi && f.pai.same_symbol?(f.consumed.min.succ) }
         else
-          chis = possible_furos.select { |f| f.type == :chi }
+          throw "Unknown chow_flag"
         end
 
         chis.sort_by! { |f| [f.pai, f.consumed].flatten.count { |pai| pai.red? } }
@@ -845,12 +932,16 @@ module TransMaujong
       @round   = (action.bakaze.data[1] - 1) * 4 + action.kyoku - 1
       @my_wind = relative_seat_pos(action.oya.id, self.id)
       @tehais_contain_tsumo = false
+      @last_is_tsumogiri = false
       M.MJPInterfaceFunc(@instance_ptr, MJPI::STARTKYOKU, @round, @my_wind)
       return nil
     end
 
     def on_round_end(action)
       prev = self.game.previous_action
+      
+      p "round_end"
+      pp game.players.map(&:tehais)
 
       reason =
         case prev.type
@@ -860,11 +951,7 @@ module TransMaujong
         end
 
       deltas = Fiddle::Pointer.malloc(Fiddle::SIZEOF_INT * 4)
-
-      for i in 0..3 do
-        deltas[Fiddle::SIZEOF_INT * i] = prev.deltas[i]
-      end
-
+      STD.memmove(deltas, prev.deltas.pack("l<*"), Fiddle::SIZEOF_INT * 4)
       M.MJPInterfaceFunc(@instance_ptr, MJPI::ENDKYOKU, reason, deltas)
 
       Fiddle.free(deltas)
@@ -885,6 +972,8 @@ module TransMaujong
       # TODO
       rank, points = 0, 0
       M.MJPInterfaceFunc(@instance_ptr, MJPI::ENDGAME, rank, points)
+      
+      M.MJPInterfaceFunc(@instance_ptr, MJPI::DESTROY, 0, 0)
       return nil
     end
   end
