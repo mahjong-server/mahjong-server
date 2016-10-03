@@ -15,6 +15,8 @@ http://mjai.hocha.org/
  元プロジェクト（修正BSDライセンス）
  http://gimite.net/pukiwiki/index.php?Mjai%20%CB%E3%BF%FDAI%C2%D0%C0%EF%A5%B5%A1%BC%A5%D0
 
+ 実行コマンド（カレントディレクトリに注意）
+ $ ./bin/multisrv.rb
 
 * MjaiForms/
  wistery_kさん作成の、mjaiプロトコルに対応した人間用クライアントに修正を加えたものです。
@@ -36,3 +38,5 @@ http://mjai.hocha.org/
 * public_html/
  牌譜・成績等を閲覧するための、Webサイトのコードです。
  牌譜ビューアは、gimiteさんのmjaiプロジェクト内のものです。
+
+ index.cgi と同じディレクトリ内に mjlog へのシンボリックリンクを張る
