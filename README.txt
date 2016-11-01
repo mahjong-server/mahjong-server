@@ -29,10 +29,22 @@ http://mjai.hocha.org/
  牌画
  http://suzume.hakata21.com/5zats/haiga43.html
 
+*tsumogiri
+接続テスト用のツモ切りを行うプレイヤです。
+g++のコンパイラが必要です。
+実行コマンド
+$make
+$./main
 
-* transmau/
+* transmau_ws/
  「まうじゃん」Windows版のAPIを実装した、DLL形式の麻雀AIを、mjaiサーバーに接続するためのラッパースクリプトです。
  Ruby で作成されていますが、Windowsでのみ動作します。
+
+1. http://shokai.org/blog/archives/7223 からwebsocket-client-simple をインストール
+2. RubyInstaller のページから、Ruby 2.1.x（x64と書いていないもの）をダウンロードし、インストールする（現時点では Ruby 2.1.7）。インストール中、インストール先の指定画面にある「Ruby への実行ファイルへ環境変数 PATH を設定する」にチェックを入れる
+3. コマンド プロンプトで gem install bundler sass nokogiri を実行
+4. 本プロジェクトのソースファイル mjai_flood_○○○_○○○○.zip を展開し、mjai_flood\transmau\MaujongPlugin ディレクトリ内に「まうじゃん」のDLLファイルを置く（例えば Akagi_1.0.dll とします）
+5. mjai_flood\transmau をカレントディレクトリとして、 ruby test.rb Akagi_1.0 を実行
 
 
 * public_html/
@@ -40,3 +52,10 @@ http://mjai.hocha.org/
  牌譜ビューアは、gimiteさんのmjaiプロジェクト内のものです。
 
  index.cgi と同じディレクトリ内に mjlog へのシンボリックリンクを張る
+
+* 試合結果
+　http://www.logos.t.u-tokyo.ac.jp/mjlog/
+
+
+* protocol.txt
+　麻雀サーバーでやり取りするメッセージの形式を書いています。
