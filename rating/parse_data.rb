@@ -25,7 +25,7 @@ def insert(line, matches)
     match = matches[json["idtime"]]
 
     match[:scores] = json["score"]
-    match[:rank] = rank(match[:players], match[:scores])
+    match[:ranks] = rank(match[:players], match[:scores])
   end
 end
 
