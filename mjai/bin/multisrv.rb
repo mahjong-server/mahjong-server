@@ -13,6 +13,9 @@ require "mjai/file_converter"
 SERVER_HOST = "0.0.0.0"
 SERVER_PORT = 11600
 
+START_MINUTE_MULT = 5
+GUARD_INTERVAL_SEC = 60
+
 module ClientStatus
   ACCEPTED = 1
   READY = 2
@@ -119,11 +122,13 @@ end
 
 
 
+final_game_started = -1
+
 while true
 	socks = clients.collect{|c| c.socket}
 	socks.push(server)
 	
-	ready = select(socks, [], [], 10)
+	ready = select(socks, [], [], 5)
 	if ready != nil then
 		
 		ready[0].each do |socket|
@@ -197,13 +202,35 @@ while true
 	end
 	
 	
-	# クライアントが4人揃っていたらスタート
-	readycl = clients.find_all{|c| c.status == ClientStatus::READY}
-	if readycl.count < 4 then
-		next
+	n = Time.now
+	if n.min % START_MINUTE_MULT == 0 && (n.to_i - final_game_started)>GUARD_INTERVAL_SEC then
+		
+		final_game_started = n.to_i
+		
+		
+		loop do
+			
+			# クライアントが4人揃っていたらスタート
+			readycl = clients.find_all{|c| c.status == ClientStatus::READY}
+			if readycl.count < 4 then
+				break
+			end
+			
+			STDERR.puts "starting game..."
+			
+			# 4人選び出す
+			playcl = readycl.sample(4)
+			
+			# 開始クライアントは削除
+			clients = clients - playcl
+			
+			Thread.new(playcl) do |cls|
+				play_game(cls)
+			end
+			
+		end
 	end
 	
-	STDERR.puts "starting game..."
 	
 	# 4人選び出す
 	playcl = readycl.sample(4)
