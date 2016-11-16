@@ -51,6 +51,7 @@ def play_game(clients)
 		log_out.printf("%s: %s\n", c.screen_name, c.socket.peeraddr.to_s);
 	end
 	STDERR.puts "Game start: " + clients.collect{|c| [c.socket.peeraddr.to_s, c.screen_name]}.to_s
+	Thread.current[:gameid] = date_string
 	
 	begin
 		mjson_out = open(mjson_path, "w")
@@ -228,19 +229,22 @@ while true
 				play_game(cls)
 			end
 			
+			sleep(1)
+			
 		end
 	end
 	
+	table_str = clients.find_all{|c| c.status == ClientStatus::READY}.count.to_s + ":" +
+		((Thread::list.find_all{|t| t[:gameid]}.count)*4).to_s
 	
-	# 4人選び出す
-	playcl = readycl.sample(4)
-	
-	# 開始クライアントは削除
-	clients = clients - playcl
-	
-	Thread.new(playcl) do |cls|
-		play_game(cls)
-	end
+	# https://docs.ruby-lang.org/ja/latest/method/File/i/flock.html
+	File.open("mjlog/table.txt", File::RDWR|File::CREAT, 0644) {|f|
+		f.flock(File::LOCK_EX)
+		f.rewind
+		f.write(table_str)
+		f.flush
+		f.truncate(f.pos)
+	}
 	
 end
 

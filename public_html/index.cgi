@@ -45,6 +45,8 @@ HTMLDOC
 
 print File.open("message.txt", &:read)
 
+puts "<p>接続人数: " + print File.open("./mjlog/table.txt", &:read) + "</p>"
+
 list = {}
 
 log = open("./mjlog/stat.txt", "r:utf-8")
