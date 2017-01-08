@@ -50,7 +50,13 @@ OBJS=$(SRCS:.cpp=.o)
 
 PROGRAM=main
 
-all : $(BUILD_DIR) $(patsubst %,$(BUILD_DIR)/%,$(PROGRAM))
+all:
+	$(MAKE) TARGET=$@ preparation client
+
+preparation $(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+client : $(BUILD_DIR) $(patsubst %,$(BUILD_DIR)/%,$(PROGRAM))
 
 $(BUILD_DIR)/%.o : %.cpp
 	$(CXX) -c $(CXXFLAGS) -o $@ $<
